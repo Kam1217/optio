@@ -1,6 +1,12 @@
 package handlers
 
-import "github.com/Kam1217/optio/internal/auth/models"
+import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/Kam1217/optio/internal/auth/middleware"
+	"github.com/Kam1217/optio/internal/auth/models"
+)
 
 //This is where the authentication logic goes -login, register etc.
 
@@ -23,10 +29,30 @@ type AuthResponse struct {
 }
 
 //Register func 
-//- Check if user existsd
+//-decode body to struct
+//-Handle empty username, password, email
+//- Check if user exists
 //- generate JWT
 //-Register - create user 
+func (a *AuthResponse) RegisterUser(w http.ResponseWriter, r *http.Request) {
+	var req RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w,"Invalid JSON", http.StatusBadRequest)
+		return
+	}
 
+	if req.Username == "" || req.Password == "" || req.Email == "" {
+		http.Error(w,"Username, password and email cannot be empty", http.StatusBadRequest)
+		return 
+	}
+
+	//Check if user exists - db func 
+
+	//Create user - db func
+
+	//Generate JWT - need db
+
+}
 
 //Login func
 
