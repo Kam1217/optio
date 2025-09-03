@@ -2,17 +2,13 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
-
-//This is where I will handle my JWT logic
-//Make JWT
-//Validate JWT
-//Get Bearer Token
-//Make Refresh Token
 
 var jwtSecret = []byte("secret key - TO DO")
 
@@ -31,22 +27,42 @@ func GenerateJWT(userID uuid.UUID, username string) (string, error) {
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
 	return token.SignedString(jwtSecret)
 }
 
 func ValidateJWT(tokenstring string) (*Claims, error) {
 	claims := &Claims{}
-
 	token, err := jwt.ParseWithClaims(tokenstring, claims, func(token *jwt.Token) (any, error) { return jwtSecret, nil })
 	if err != nil {
 		return nil, err
 	}
-
 	if !token.Valid {
 		return nil, fmt.Errorf("token is invalid")
 	}
 
 	return claims, nil
 }
+
+func JWTMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Missing authorizaton header", http.StatusUnauthorized)
+			return
+		}
+		tokenString := strings.Replace(authHeader, "Bearer", "", 1)
+		claims, err := ValidateJWT(tokenString)
+		if err != nil {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+		r.Header.Set("user_id", claims.UserID.String())
+		r.Header.Set("username", claims.Username)
+
+		next.ServeHTTP(w,r)
+	}
+}
+
+//Refresh Token
