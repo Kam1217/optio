@@ -40,3 +40,8 @@ func Connect(cfg Config) (*DB, error) {
 		dbQueries: queries,
 	}, nil
 }
+
+func (db *DB) Close() error {
+	return db.DB.Close()
+}
+
