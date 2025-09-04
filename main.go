@@ -11,10 +11,16 @@ import (
 	"github.com/Kam1217/optio/internal/auth/models"
 	"github.com/Kam1217/optio/internal/database"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	dbConfig := db.Config{
 		DBName:   os.Getenv("DB_NAME"),
 		Host:     os.Getenv("DB_HOST"),
