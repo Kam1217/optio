@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/Kam1217/optio/internal/database"
 	"github.com/google/uuid"
@@ -24,12 +25,9 @@ func HashPassword(password string) (string, error) {
 	return string(hashedPassword), nil
 }
 
-func CheckPassword(hashedPassword, password string) error {
+func checkPassword(hashedPassword, password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-	if err != nil {
-		return err
-	}
-	return nil
+	return err == nil
 }
 
 func (s *UserService) UserExists(ctx context.Context, username, email string) (bool, error) {
@@ -91,7 +89,18 @@ func (s *UserService) GetUserByID(ctx context.Context, userID uuid.UUID) (*datab
 	return &user, nil
 }
 
-// TODO: Validate user credentials
+func (s *UserService) ValidateUserCredentials(ctx context.Context, username, password string) (*database.User, error) {
+	user, err := s.queries.GetUserByUsername(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	if !checkPassword(user.PasswordHash, password) {
+		return nil, sql.ErrNoRows
+	}
+
+	return &user, nil
+}
 
 func (s *UserService) ListUsers(ctx context.Context, limit, offset int) ([]database.ListUsersRow, error) {
 	users, err := s.queries.ListUsers(ctx, database.ListUsersParams{
@@ -118,7 +127,7 @@ func (s *UserService) UpdateUserPassword(ctx context.Context, userID uuid.UUID, 
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
-	if err := s.queries.DeleteUser(ctx, userID); err != nil{
+	if err := s.queries.DeleteUser(ctx, userID); err != nil {
 		return err
 	}
 	return nil
