@@ -64,6 +64,14 @@ func (s *UserService) CreateUser(ctx context.Context, username, email, password 
 	return &user, nil
 }
 
-//TODO:Get User by username
+// TODO:Get User by username
+func (s *UserService) GetUserByUsername(ctx context.Context, username string) (*database.User, error) {
+	user, err := s.queries.GetUserByUsername(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
 
 //TODO:Get User by ID
