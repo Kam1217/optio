@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Kam1217/optio/internal/database"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -45,7 +46,6 @@ func (s *UserService) UserExists(ctx context.Context, username, email string) (b
 	return usernameExists || emailExists, nil
 }
 
-// TODO:Create User - insert into database
 func (s *UserService) CreateUser(ctx context.Context, username, email, password string) (*database.User, error) {
 	passwordHash, err := HashPassword(password)
 	if err != nil {
@@ -64,7 +64,6 @@ func (s *UserService) CreateUser(ctx context.Context, username, email, password 
 	return &user, nil
 }
 
-// TODO:Get User by username
 func (s *UserService) GetUserByUsername(ctx context.Context, username string) (*database.User, error) {
 	user, err := s.queries.GetUserByUsername(ctx, username)
 	if err != nil {
@@ -74,7 +73,6 @@ func (s *UserService) GetUserByUsername(ctx context.Context, username string) (*
 	return &user, nil
 }
 
-// TODO:Get User by email
 func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*database.User, error) {
 	user, err := s.queries.GetUserByEmail(ctx, email)
 	if err != nil {
@@ -84,5 +82,19 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*databa
 	return &user, nil
 }
 
-//TODO:Get User by ID
+func (s *UserService) GetUserByID(ctx context.Context, userID uuid.UUID) (*database.User, error) {
+	user, err := s.queries.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 
+	return &user, nil
+}
+
+//TODO: Validate user credentials
+
+//TODO: List users
+
+//TODO: Update password
+
+//TODO: Delete user
