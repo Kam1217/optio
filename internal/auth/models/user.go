@@ -91,9 +91,20 @@ func (s *UserService) GetUserByID(ctx context.Context, userID uuid.UUID) (*datab
 	return &user, nil
 }
 
-//TODO: Validate user credentials
+// TODO: Validate user credentials
 
-//TODO: List users
+// TODO: List users
+func (s *UserService) ListUsers(ctx context.Context, limit, offset int) ([]database.ListUsersRow, error) {
+	users, err := s.queries.ListUsers(ctx, database.ListUsersParams{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
 
 //TODO: Update password
 
