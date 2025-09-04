@@ -4,17 +4,17 @@ VALUES ($1, $2, $3)
 RETURNING *;
 
 -- name: GetUserByUsername :one
-SELECT id, username, email, password_hash, created_at, updated_at
+SELECT id, username, password_hash, email, created_at, updated_at
 FROM users
 WHERE username = $1;
 
 -- name: GetUserByEmail :one
-SELECT id, username, email, password_hash, created_at, updated_at
+SELECT id, username, password_hash, email, created_at, updated_at
 FROM users
 WHERE email = $1;
 
 -- name: GetUserByID :one
-SELECT id, username, email, password_hash, created_at, updated_at
+SELECT id, username, password_hash, email, created_at, updated_at
 FROM users
 WHERE id = $1;
 
