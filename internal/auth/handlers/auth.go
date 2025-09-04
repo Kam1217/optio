@@ -11,11 +11,6 @@ import (
 
 //This is where the authentication logic goes -login, register etc.
 
-type DB struct {
-	*sql.DB
-	db *database.Queries
-}
-
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
