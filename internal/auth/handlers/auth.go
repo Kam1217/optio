@@ -139,8 +139,31 @@ func (h *AuthHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	h.respondWithJSON(w, response, http.StatusOK)
 }
 
-//Profile func
-//- retrievs the user profile
+func (h *AuthHandler) Profile(w http.ResponseWriter, r *http.Request) {
+	userIDstr := r.Header.Get("user_id")
+	if userIDstr == "" {
+		http.Error(w, "User ID not found", http.StatusUnauthorized)
+		return
+	}
+
+	userID, err := uuid.Parse(userIDstr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	}
+
+	user, err := h.UserService.GetUserByID(context.Background(), userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	userResponse := h.toUserResponse(user)
+	h.respondWithJSON(w, userResponse, http.StatusOK)
+}
 
 func (h *AuthHandler) respondWithJSON(w http.ResponseWriter, data any, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
