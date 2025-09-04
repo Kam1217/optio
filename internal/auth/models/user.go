@@ -106,6 +106,17 @@ func (s *UserService) ListUsers(ctx context.Context, limit, offset int) ([]datab
 	return users, nil
 }
 
-//TODO: Update password
+// TODO: Update password
+func (s *UserService) UpdateUserPassword(ctx context.Context, userID uuid.UUID, newPassword string) error {
+	passwordHash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	return s.queries.UpdateUserPassword(ctx, database.UpdateUserPasswordParams{
+		ID:           userID,
+		PasswordHash: passwordHash,
+	})
+}
 
 //TODO: Delete user
