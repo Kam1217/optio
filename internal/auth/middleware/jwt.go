@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var jwtSecret = []byte("secret key - TO DO")
+var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
 type Claims struct {
 	UserID   uuid.UUID `json:"user_id"`
@@ -61,8 +62,8 @@ func JWTMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		r.Header.Set("user_id", claims.UserID.String())
 		r.Header.Set("username", claims.Username)
 
-		next.ServeHTTP(w,r)
+		next.ServeHTTP(w, r)
 	}
 }
 
-//TODO: Refresh Token 
+//TODO: Refresh Token
