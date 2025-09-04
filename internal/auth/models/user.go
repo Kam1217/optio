@@ -45,10 +45,24 @@ func (s *UserService) UserExists(ctx context.Context, username, email string) (b
 	return usernameExists || emailExists, nil
 }
 
+// TODO:Create User - insert into database
+func (s *UserService) CreateUser(ctx context.Context, username, email, password string) (*database.User, error) {
+	passwordHash, err := HashPassword(password)
+	if err != nil {
+		return nil, err
+	}
 
-//TODO:Check is user exists
+	user, err := s.queries.CreateUser(ctx, database.CreateUserParams{
+		Username:     username,
+		Email:        email,
+		PasswordHash: passwordHash,
+	})
+	if err != nil {
+		return nil, err
+	}
 
-//TODO:Create User - insert into database
+	return &user, nil
+}
 
 //TODO:Get User by username
 
