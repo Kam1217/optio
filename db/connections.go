@@ -11,7 +11,7 @@ import (
 
 type DB struct {
 	*sql.DB
-	dbQueries *database.Queries
+	Queries *database.Queries
 }
 
 type Config struct {
@@ -36,8 +36,8 @@ func Connect(cfg Config) (*DB, error) {
 	queries := database.New(dbConn)
 
 	return &DB{
-		DB:        dbConn,
-		dbQueries: queries,
+		DB:      dbConn,
+		Queries: queries,
 	}, nil
 }
 

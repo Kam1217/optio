@@ -9,7 +9,6 @@ import (
 	"github.com/Kam1217/optio/internal/auth/handlers"
 	"github.com/Kam1217/optio/internal/auth/middleware"
 	"github.com/Kam1217/optio/internal/auth/models"
-	"github.com/Kam1217/optio/internal/database"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -37,7 +36,7 @@ func main() {
 
 	log.Printf("Succesfully connected to the database")
 
-	userService := models.NewUserService(&database.Queries{})
+	userService := models.NewUserService(db.Queries)
 
 	authHandler := handlers.NewAuthHandler(db.DB, userService)
 
