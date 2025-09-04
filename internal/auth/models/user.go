@@ -93,7 +93,6 @@ func (s *UserService) GetUserByID(ctx context.Context, userID uuid.UUID) (*datab
 
 // TODO: Validate user credentials
 
-// TODO: List users
 func (s *UserService) ListUsers(ctx context.Context, limit, offset int) ([]database.ListUsersRow, error) {
 	users, err := s.queries.ListUsers(ctx, database.ListUsersParams{
 		Limit:  int32(limit),
@@ -106,7 +105,6 @@ func (s *UserService) ListUsers(ctx context.Context, limit, offset int) ([]datab
 	return users, nil
 }
 
-// TODO: Update password
 func (s *UserService) UpdateUserPassword(ctx context.Context, userID uuid.UUID, newPassword string) error {
 	passwordHash, err := HashPassword(newPassword)
 	if err != nil {
@@ -119,4 +117,9 @@ func (s *UserService) UpdateUserPassword(ctx context.Context, userID uuid.UUID, 
 	})
 }
 
-//TODO: Delete user
+func (s *UserService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
+	if err := s.queries.DeleteUser(ctx, userID); err != nil{
+		return err
+	}
+	return nil
+}
