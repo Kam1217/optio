@@ -104,7 +104,40 @@ func (h *AuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	h.respondWithJSON(w, response, http.StatusOK)
 }
 
-//Login func
+func (h *AuthHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
+	var req RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if req.Username == "" || req.Password == "" {
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.UserService.ValidateUserCredentials(context.Background(), req.Username, req.Password)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+	}
+
+	token, err := middleware.GenerateJWT(user.ID, user.Username)
+	if err != nil {
+		http.Error(w, "Error generating token", http.StatusInternalServerError)
+		return
+	}
+
+	userResponse := h.toUserResponse(user)
+	response := AuthResponse{
+		Token: token,
+		User:  userResponse,
+	}
+
+	h.respondWithJSON(w, response, http.StatusOK)
+}
 
 //Profile func
 //- retrievs the user profile
