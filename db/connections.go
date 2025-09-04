@@ -45,3 +45,6 @@ func (db *DB) Close() error {
 	return db.DB.Close()
 }
 
+func (db *DB) Health() error {
+	return db.DB.Ping()
+}
