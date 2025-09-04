@@ -74,4 +74,15 @@ func (s *UserService) GetUserByUsername(ctx context.Context, username string) (*
 	return &user, nil
 }
 
+// TODO:Get User by email
+func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*database.User, error) {
+	user, err := s.queries.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 //TODO:Get User by ID
+
