@@ -95,3 +95,10 @@ func corsMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+//REFRESH TOKEN
+//SEND EMAIL TO VERIFY
+//BE ABLE TO LOGIN VIA EMAIL OR USERNAME
+//CLEAN UP
+//GOOGLE LOGIN
+//STEAM LOGIN
