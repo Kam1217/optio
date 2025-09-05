@@ -118,7 +118,7 @@ func atoiEnv(key string, def int) int {
 	return valueInt
 }
 
-func durEnv(key, def string) time.Duration {
+func durEnv(key, _ string) time.Duration {
 	value := os.Getenv(key)
 	if value == "" {
 		return time.Duration(0)
