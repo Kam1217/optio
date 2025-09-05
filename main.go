@@ -84,6 +84,9 @@ func setUpRouts(authHandler *handlers.AuthHandler, jwtMgr *middleware.JWTManager
 		w.Write([]byte(`{"status": "ok", "message": "Server is running"}`))
 	}).Methods("GET")
 
+	fs := http.FileServer(http.Dir("./assets"))
+	router.PathPrefix("/").Handler(fs)
+
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Endpoint not found", http.StatusNotFound)
 	})
