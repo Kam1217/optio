@@ -4,31 +4,33 @@ VALUES ($1, $2, $3)
 RETURNING id, username, email, created_at, updated_at, deleted_at;
 
 -- name: GetUserByUsername :one
-SELECT id, username, password_hash, email, created_at, updated_at, password_changed_at, deleted_at
+SELECT id, username, email, created_at, updated_at, password_changed_at, deleted_at
 FROM users
 WHERE username = $1 AND deleted_at IS NULL;
 
 -- name: GetUserByEmail :one
-SELECT id, username, password_hash, email, created_at, updated_at, password_changed_at, deleted_at
+SELECT id, username, email, created_at, updated_at, password_changed_at, deleted_at
 FROM users
 WHERE email = $1 AND deleted_at IS NULL;
 
 -- name: GetUserByID :one
-SELECT id, username, password_hash, email, created_at, updated_at, password_changed_at, deleted_at
+SELECT id, username, email, created_at, updated_at, password_changed_at, deleted_at
 FROM users
 WHERE id = $1 AND deleted_at IS NULL;
 
--- name: UserExistsByUsername :one
-SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND deleted_at IS NULL);
+-- name: UserExistsByUsernameOrEmail :one
+SELECT EXISTS(SELECT 1 FROM users WHERE (username = $1 OR email = $2) AND deleted_at IS NULL);
 
--- name: UserExistsByEmail :one
-SELECT EXISTS(SELECT 1 FROM users WHERE email = $1) AND deleted_at is NULL;
+-- name: GetUserForLogin :one
+SELECT id, username, email, password_hash, password_changed_at, deleted_at
+FROM users
+WHERE (username = $1 OR email = $1) AND deleted_at IS NULL;
 
 -- name: ListUsers :many
 SELECT id, username, email, created_at, updated_at 
 FROM users 
 WHERE deleted_at IS NULL
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 LIMIT $1 OFFSET $2;
 
 -- name: UpdateUserPassword :exec

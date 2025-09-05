@@ -60,7 +60,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, password_hash, email, created_at, updated_at, password_changed_at, deleted_at
+SELECT id, username, email, created_at, updated_at, password_changed_at, deleted_at
 FROM users
 WHERE email = $1 AND deleted_at IS NULL
 `
@@ -68,7 +68,6 @@ WHERE email = $1 AND deleted_at IS NULL
 type GetUserByEmailRow struct {
 	ID                uuid.UUID
 	Username          string
-	PasswordHash      string
 	Email             string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
@@ -82,7 +81,6 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
-		&i.PasswordHash,
 		&i.Email,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -93,7 +91,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, password_hash, email, created_at, updated_at, password_changed_at, deleted_at
+SELECT id, username, email, created_at, updated_at, password_changed_at, deleted_at
 FROM users
 WHERE id = $1 AND deleted_at IS NULL
 `
@@ -101,7 +99,6 @@ WHERE id = $1 AND deleted_at IS NULL
 type GetUserByIDRow struct {
 	ID                uuid.UUID
 	Username          string
-	PasswordHash      string
 	Email             string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
@@ -115,7 +112,6 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
-		&i.PasswordHash,
 		&i.Email,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -126,7 +122,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, password_hash, email, created_at, updated_at, password_changed_at, deleted_at
+SELECT id, username, email, created_at, updated_at, password_changed_at, deleted_at
 FROM users
 WHERE username = $1 AND deleted_at IS NULL
 `
@@ -134,7 +130,6 @@ WHERE username = $1 AND deleted_at IS NULL
 type GetUserByUsernameRow struct {
 	ID                uuid.UUID
 	Username          string
-	PasswordHash      string
 	Email             string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
@@ -148,10 +143,38 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
-		&i.PasswordHash,
 		&i.Email,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PasswordChangedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getUserForLogin = `-- name: GetUserForLogin :one
+SELECT id, username, email, password_hash, password_changed_at, deleted_at
+FROM users
+WHERE (username = $1 OR email = $1) AND deleted_at IS NULL
+`
+
+type GetUserForLoginRow struct {
+	ID                uuid.UUID
+	Username          string
+	Email             string
+	PasswordHash      string
+	PasswordChangedAt sql.NullTime
+	DeletedAt         sql.NullTime
+}
+
+func (q *Queries) GetUserForLogin(ctx context.Context, username string) (GetUserForLoginRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserForLogin, username)
+	var i GetUserForLoginRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.PasswordHash,
 		&i.PasswordChangedAt,
 		&i.DeletedAt,
 	)
@@ -162,7 +185,7 @@ const listUsers = `-- name: ListUsers :many
 SELECT id, username, email, created_at, updated_at 
 FROM users 
 WHERE deleted_at IS NULL
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 LIMIT $1 OFFSET $2
 `
 
@@ -256,23 +279,17 @@ func (q *Queries) UpdateUsername(ctx context.Context, arg UpdateUsernameParams) 
 	return err
 }
 
-const userExistsByEmail = `-- name: UserExistsByEmail :one
-SELECT EXISTS(SELECT 1 FROM users WHERE email = $1) AND deleted_at is NULL
+const userExistsByUsernameOrEmail = `-- name: UserExistsByUsernameOrEmail :one
+SELECT EXISTS(SELECT 1 FROM users WHERE (username = $1 OR email = $2) AND deleted_at IS NULL)
 `
 
-func (q *Queries) UserExistsByEmail(ctx context.Context, email string) (sql.NullBool, error) {
-	row := q.db.QueryRowContext(ctx, userExistsByEmail, email)
-	var column_1 sql.NullBool
-	err := row.Scan(&column_1)
-	return column_1, err
+type UserExistsByUsernameOrEmailParams struct {
+	Username string
+	Email    string
 }
 
-const userExistsByUsername = `-- name: UserExistsByUsername :one
-SELECT EXISTS(SELECT 1 FROM users WHERE username = $1 AND deleted_at IS NULL)
-`
-
-func (q *Queries) UserExistsByUsername(ctx context.Context, username string) (bool, error) {
-	row := q.db.QueryRowContext(ctx, userExistsByUsername, username)
+func (q *Queries) UserExistsByUsernameOrEmail(ctx context.Context, arg UserExistsByUsernameOrEmailParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, userExistsByUsernameOrEmail, arg.Username, arg.Email)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
