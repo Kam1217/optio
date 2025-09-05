@@ -3,11 +3,10 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/Kam1217/optio/internal/database"
 )
-
-//Setup DB here
 
 type DB struct {
 	*sql.DB
@@ -15,11 +14,17 @@ type DB struct {
 }
 
 type Config struct {
-	DBName   string
-	Host     string
-	Port     string
-	User     string
-	Password string
+	DBName          string
+	Host            string
+	Port            string
+	User            string
+	Password        string
+	SSLMode         string
+	TimeZone        string
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	ConnMaxIdleTime time.Duration
 }
 
 func Connect(cfg Config) (*DB, error) {
