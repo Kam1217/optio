@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -13,22 +13,18 @@ import (
 	"github.com/google/uuid"
 )
 
-// This is where the authentication logic goes -login, register etc.
 type AuthHandler struct {
 	DB          *sql.DB
 	UserService *models.UserService
+	JWT         *middleware.JWTManager
 }
 
-func NewAuthHandler(db *sql.DB, userService *models.UserService) *AuthHandler {
+func NewAuthHandler(db *sql.DB, userService *models.UserService, jwtManager *middleware.JWTManager) *AuthHandler {
 	return &AuthHandler{
 		DB:          db,
 		UserService: userService,
+		JWT:         jwtManager,
 	}
-}
-
-type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
 }
 
 type RegisterRequest struct {
@@ -37,9 +33,9 @@ type RegisterRequest struct {
 	Email    string `json:"email"`
 }
 
-type AuthResponse struct {
-	Token string `json:"token"`
-	User  any    `json:"user"`
+type LoginRequest struct {
+	Identifier string `json:"identifier"`
+	Password   string `json:"password"`
 }
 
 type UserResponse struct {
@@ -50,17 +46,41 @@ type UserResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func (h *AuthHandler) toUserResponse(user *database.User) UserResponse {
+type AuthResponse struct {
+	Token string       `json:"token"`
+	User  UserResponse `json:"user"`
+}
+
+func (h *AuthHandler) toUserResponseFromCreate(u *database.CreateUserRow) UserResponse {
 	return UserResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		ID:        u.ID,
+		Username:  u.Username,
+		Email:     u.Email,
+		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
+	}
+}
+
+
+func (h *AuthHandler) toUserFromLogin(user *database.GetUserForLoginRow) UserResponse {
+	return UserResponse{
+		ID:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+	}
+}
+
+func (h *AuthHandler) toUserGetUserByIDRow(user *database.GetUserByIDRow) UserResponse {
+	return UserResponse{
+		ID:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
 	}
 }
 
 func (h *AuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
@@ -72,97 +92,93 @@ func (h *AuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err := h.UserService.UserExists(context.Background(), req.Username, req.Email)
+	exists, err := h.UserService.UserExists(ctx, req.Username, req.Email)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
-
 	if exists {
-		http.Error(w, "user with this email or username already exists", http.StatusConflict)
+		http.Error(w, "User with this email or username already exists", http.StatusConflict)
 		return
 	}
 
-	user, err := h.UserService.CreateUser(context.Background(), req.Username, req.Email, req.Password)
+	user, err := h.UserService.CreateUser(ctx, req.Username, req.Email, req.Password)
 	if err != nil {
 		http.Error(w, "Error creating user", http.StatusInternalServerError)
 		return
 	}
 
-	token, err := middleware.GenerateJWT(user.ID, user.Username)
+	token, err := h.JWT.GenerateJWT(user.ID, user.Username)
 	if err != nil {
 		http.Error(w, "Error generating token", http.StatusInternalServerError)
 		return
 	}
-
-	userResponse := h.toUserResponse(user)
 	response := AuthResponse{
 		Token: token,
-		User:  userResponse,
+		User:  h.toUserResponseFromCreate(user),
 	}
 
 	h.respondWithJSON(w, response, http.StatusOK)
 }
 
 func (h *AuthHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
+	ctx := r.Context()
+
+	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
-	if req.Username == "" || req.Password == "" {
-		http.Error(w, "Username and password are required", http.StatusBadRequest)
+	if req.Identifier == "" || req.Password == "" {
+		http.Error(w, "identifier and password are required", http.StatusBadRequest)
 		return
 	}
 
-	user, err := h.UserService.ValidateUserCredentials(context.Background(), req.Username, req.Password)
+	user, err := h.UserService.ValidateUserCredentials(ctx, req.Identifier, req.Password)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, models.ErrInvalidCredentails) || errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-		}
-		http.Error(w, "Database error", http.StatusInternalServerError)
-	}
-
-	token, err := middleware.GenerateJWT(user.ID, user.Username)
-	if err != nil {
-		http.Error(w, "Error generating token", http.StatusInternalServerError)
-		return
-	}
-
-	userResponse := h.toUserResponse(user)
-	response := AuthResponse{
-		Token: token,
-		User:  userResponse,
-	}
-
-	h.respondWithJSON(w, response, http.StatusOK)
-}
-
-func (h *AuthHandler) Profile(w http.ResponseWriter, r *http.Request) {
-	userIDstr := r.Header.Get("user_id")
-	if userIDstr == "" {
-		http.Error(w, "User ID not found", http.StatusUnauthorized)
-		return
-	}
-
-	userID, err := uuid.Parse(userIDstr)
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-	}
-
-	user, err := h.UserService.GetUserByID(context.Background(), userID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(w, "User not found", http.StatusNotFound)
 			return
 		}
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	userResponse := h.toUserResponse(user)
-	h.respondWithJSON(w, userResponse, http.StatusOK)
+	token, err := h.JWT.GenerateJWT(user.ID, user.Username)
+	if err != nil {
+		http.Error(w, "Error generating token", http.StatusInternalServerError)
+		return
+	}
+
+	response := AuthResponse{
+		Token: token,
+		User:  h.toUserFromLogin(user),
+	}
+
+	h.respondWithJSON(w, response, http.StatusOK)
+}
+
+func (h *AuthHandler) Profile(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, ok := middleware.UserIDFromCtx(ctx)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.UserService.GetUserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, "user not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	h.respondWithJSON(w, h.toUserGetUserByIDRow(user), http.StatusOK)
 }
 
 func (h *AuthHandler) respondWithJSON(w http.ResponseWriter, data any, statusCode int) {

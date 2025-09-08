@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+
+<body>
+    <h3>Register</h3>
+    <form id="reg">
+        <input name="username" placeholder="username">
+        <input name="email" placeholder="email">
+        <input name="password" placeholder="password" type="password">
+        <button>Register</button>
+    </form>
+
+    <h3>Login</h3>
+    <form id="login">
+        <input name="identifier" placeholder="username or email">
+        <input name="password" placeholder="password" type="password">
+        <button>Login</button>
+    </form>
+
+    <pre id="out"></pre>
+
+    <script>
+        const BASE = 'http://localhost:8080';
+        let token = '';
+
+        const out = msg => document.getElementById('out').textContent = JSON.stringify(msg, null, 2);
+        const post = async (path, body, auth = false) => {
+            const res = await fetch(BASE + path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(auth && token ? { 'Authorization': 'Bearer ' + token } : {}) },
+                body: JSON.stringify(body)
+            });
+            const json = await res.json().catch(() => ({}));
+            return { status: res.status, json };
+        };
+
+        document.getElementById('reg').onsubmit = async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            const r = await post('/api/auth/register', { username: f.get('username'), email: f.get('email'), password: f.get('password') });
+            out(r);
+        };
+
+        document.getElementById('login').onsubmit = async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            const r = await post('/api/auth/login', { identifier: f.get('identifier'), password: f.get('password') });
+            if (r.status === 200) token = r.json.token;
+            out(r);
+            if (token) {
+                const prof = await fetch(BASE + '/api/auth/profile', { headers: { Authorization: 'Bearer ' + token } });
+                out({ login: r, profile: await prof.json(), profileStatus: prof.status });
+            }
+        };
+    </script>
+</body>
+
+</html>
