@@ -221,6 +221,11 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("bad login response: %v", login)
 	}
 	//Success login email
+	loginBody2 := `{"identifier":"test3@example.com", "password":"test123"}`
+	loginRes2 := postJSON(t, base+"/api/auth/login", loginBody2)
+	if loginRes2.Code != 200 {
+		t.Fatalf("succesfull username login: want 200, got %d body: %s", loginRes2.Code, loginRes2.Body)
+	}
 
 	//Bad username
 
