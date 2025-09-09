@@ -125,6 +125,25 @@ func startTestServer(t *testing.T) (*httptest.Server, *db.DB) {
 }
 
 // Register - t.run success, duplicate email/username, missing(email, username, password), bad JSON, user exists
+func TestRegister(t *testing.T) {
+	server, _ := startTestServer(t)
+	base := server.URL
+
+	type AuthResponse struct {
+		Token string `json:"token"`
+		User  struct {
+			ID       string `json:"id"`
+			Username string `json:"username"`
+			Email    string `json:"email"`
+		} `json:"user"`
+	}
+
+	//Successful register
+	res := postJSON(t, base+"/api/auth/register", `{"username":"test1", "email":"test1@example.com", "password":"test123"}`)
+	if res.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d body:%s", res.Code, res.Body)
+	}
+}
 
 //helpers
 
