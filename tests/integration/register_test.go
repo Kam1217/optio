@@ -18,14 +18,26 @@ import (
 	"github.com/Kam1217/optio/internal/auth/middleware"
 	"github.com/Kam1217/optio/internal/auth/models"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
+func TestMain(m *testing.M) {
+	_ = godotenv.Load("../../.env")
+	os.Exit(m.Run())
+}
+
 // helper funtion - migrate up/ down using goose
-const migrationDir = "./sql/schema"
+const migrationDir = "../../sql/schema"
 
 func gooseUp(t *testing.T, dir string) {
 	t.Helper()
-	cmd := exec.Command("goose", "-dir", dir, "up")
+	dsn := os.Getenv("DB_TEST_DSN")
+	if dsn == "" {
+		t.Fatal("DB_TEST_DSN not set")
+	}
+
+	cmd := exec.Command("goose", "-dir", dir, "postgres", dsn, "up")
 	cmd.Env = os.Environ()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -35,7 +47,11 @@ func gooseUp(t *testing.T, dir string) {
 
 func gooseDown(t *testing.T, dir string) {
 	t.Helper()
-	cmd := exec.Command("goose", "-dir", dir, "down-to", "0")
+	dsn := os.Getenv("DB_TEST_DSN")
+	if dsn == "" {
+		t.Fatal("DB_TEST_DSN not set")
+	}
+	cmd := exec.Command("goose", "-dir", dir, "postgres", dsn, "down-to", "0")
 	cmd.Env = os.Environ()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
