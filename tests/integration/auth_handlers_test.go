@@ -130,6 +130,7 @@ func startTestServer(t *testing.T) (*httptest.Server, *db.DB) {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/api/auth/register", auth.RegisterUser).Methods("POST")
+	router.HandleFunc("/api/auth/login", auth.LoginUser).Methods("POST")
 
 	server := httptest.NewUnstartedServer(router)
 	listener, _ := net.Listen("tcp", "127.0.0.1:0")
@@ -187,8 +188,68 @@ func TestRegister(t *testing.T) {
 	}
 }
 
-//helpers
+// Login test - Success login with username/email, bad username/email, bad password, missing fields
+func TestLogin(t *testing.T) {
+	server, _ := startTestServer(t)
+	base := server.URL
 
+	type LoginResponse struct {
+		Token string `json:"token"`
+		User  struct {
+			Username string `json:"username"`
+			Email    string `json:"email"`
+		} `json:"user"`
+	}
+
+	regBody := `{"username":"test3", "email":"test3@example.com","password":"test123"}`
+	regRes := postJSON(t, base+"/api/auth/register", regBody)
+	if regRes.Code != 200 {
+		t.Fatalf("register: want 200, got %d body:%s", regRes.Code, regRes.Body)
+	}
+
+	//Success login username
+	loginBody := `{"identifier":"test3","password":"test123"}`
+	loginRes := postJSON(t, base+"/api/auth/login", loginBody)
+	if loginRes.Code != 200 {
+		t.Fatalf("succesfull username login: want 200, got %d body: %s", loginRes.Code, loginRes.Body)
+	}
+
+	var login LoginResponse
+	mustJSON(t, loginRes.Body, &login)
+	if login.Token == "" || login.User.Username != "test3" {
+		t.Fatalf("bad login response: %v", login)
+	}
+
+	//Success login email
+	loginBody2 := `{"identifier":"test3@example.com", "password":"test123"}`
+	loginRes2 := postJSON(t, base+"/api/auth/login", loginBody2)
+	if loginRes2.Code != http.StatusOK {
+		t.Fatalf("succesfull username login: want 200, got %d body: %s", loginRes2.Code, loginRes2.Body)
+	}
+
+	//Bad identifier
+	badIdentifierBody := `{"identifier":"wrong", "password":"test123"}`
+	badIdentifierRes := postJSON(t, base+"/api/auth/login", badIdentifierBody)
+	if badIdentifierRes.Code != http.StatusUnauthorized {
+		t.Fatalf("wrong username: want 401, got %d body:%s", badIdentifierRes.Code, badIdentifierRes.Body)
+	}
+
+	//Bad password
+	badPasswordBody := `{"identifier": "test3", "password":"wrong"}`
+	badPasswordRes := postJSON(t, base+"/api/auth/login", badPasswordBody)
+	if badPasswordRes.Code != http.StatusUnauthorized {
+		t.Fatalf("wrong password: want 401, got %d body:%s", badPasswordRes.Code, badPasswordRes.Body)
+	}
+
+	//Missing fields
+	missingFieldBody := `{"identifier":"", "password":""}`
+	missingFieldRes := postJSON(t, base+"/api/auth/login", missingFieldBody)
+	if missingFieldRes.Code != http.StatusBadRequest {
+		t.Fatalf("missing fields: want 400, got %d body:%s", missingFieldRes.Code, missingFieldRes.Body)
+	}
+}
+
+// helpers
 type httpRes struct {
 	Code int
 	Body string
