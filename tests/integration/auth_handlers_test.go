@@ -130,6 +130,7 @@ func startTestServer(t *testing.T) (*httptest.Server, *db.DB) {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/api/auth/register", auth.RegisterUser).Methods("POST")
+	router.HandleFunc("/api/auth/login", auth.LoginUser).Methods("POST")
 
 	server := httptest.NewUnstartedServer(router)
 	listener, _ := net.Listen("tcp", "127.0.0.1:0")
@@ -199,6 +200,26 @@ func TestLogin(t *testing.T) {
 	}
 	//Success login username
 	loginBody := `{"identifier":"test3","password":"test123"}`
+	loginRes := postJSON(t, base+"/api/auth/login", loginBody)
+	if loginRes.Code != 200 {
+		t.Fatalf("succesfull username login: want 200, got %d body: %s", loginRes.Code, loginRes.Body)
+	}
+
+	var login struct {
+		Token string `json:"token"`
+		User  struct {
+			Username string `json:"username"`
+			Email    string `json:"email"`
+		} `json:"user"`
+	}
+
+	if err := json.Unmarshal([]byte(loginRes.Body), &login); err != nil {
+		t.Fatalf("unmarshal login: %v", err)
+	}
+
+	if login.Token == "" || login.User.Username != "test3" {
+		t.Fatalf("bad login response: %v", login)
+	}
 	//Success login email
 
 	//Bad username
