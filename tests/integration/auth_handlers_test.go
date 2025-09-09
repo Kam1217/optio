@@ -242,7 +242,11 @@ func TestLogin(t *testing.T) {
 	}
 
 	//Missing fields
-
+	missingFieldBody := `{"identifier":"", "password":""}`
+	missingFieldRes := postJSON(t, base+"/api/auth/login", missingFieldBody)
+	if missingFieldRes.Code != http.StatusBadRequest {
+		t.Fatalf("missing fields: want 400, got %d body:%s", missingFieldRes.Code, missingFieldRes.Body)
+	}
 	//Token works
 }
 
