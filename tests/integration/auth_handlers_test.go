@@ -223,13 +223,16 @@ func TestLogin(t *testing.T) {
 	//Success login email
 	loginBody2 := `{"identifier":"test3@example.com", "password":"test123"}`
 	loginRes2 := postJSON(t, base+"/api/auth/login", loginBody2)
-	if loginRes2.Code != 200 {
+	if loginRes2.Code != http.StatusOK {
 		t.Fatalf("succesfull username login: want 200, got %d body: %s", loginRes2.Code, loginRes2.Body)
 	}
 
-	//Bad username
-
-	//Bad email
+	//Bad identifier
+	badIdentifierBody := `{"identifier":"wrong", "password":"test123"}`
+	badIdentifierRes := postJSON(t, base+"/api/auth/login", badIdentifierBody)
+	if badIdentifierRes.Code != http.StatusUnauthorized {
+		t.Fatalf("wrong username: want 401, got %d body:%s", badIdentifierRes.Code, badIdentifierRes.Body)
+	}
 
 	//Bad password
 
