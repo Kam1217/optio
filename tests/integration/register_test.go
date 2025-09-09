@@ -2,10 +2,14 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -120,4 +124,38 @@ func startTestServer(t *testing.T) (*httptest.Server, *db.DB) {
 	return server, dbConn
 }
 
-//Register - t.run success, duplicate email/username, missing(email, username, password), bad JSON, user exists
+// Register - t.run success, duplicate email/username, missing(email, username, password), bad JSON, user exists
+
+//helpers
+
+type httpRes struct {
+	Code int
+	Body string
+}
+
+func postJSON(t *testing.T, url, body string) httpRes {
+	return postRaw(t, url, body, "application/json")
+}
+
+func postRaw(t *testing.T, url, body, contentType string) httpRes {
+	t.Helper()
+	req, _ := http.NewRequest("POST", url, strings.NewReader(body))
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	c := &http.Client{Timeout: 5 * time.Second}
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatalf("POST %s: %v", url, err)
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	return httpRes{Code: resp.StatusCode, Body: string(b)}
+}
+
+func mustJSON(t *testing.T, s string, v any) {
+	t.Helper()
+	if err := json.Unmarshal([]byte(s), v); err != nil {
+		t.Fatalf("unmarshal: %v; body=%s", err, s)
+	}
+}
