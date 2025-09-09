@@ -2,7 +2,9 @@ package integration
 
 import (
 	"context"
+	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"testing"
@@ -12,6 +14,7 @@ import (
 	"github.com/Kam1217/optio/internal/auth/handlers"
 	"github.com/Kam1217/optio/internal/auth/middleware"
 	"github.com/Kam1217/optio/internal/auth/models"
+	"github.com/gorilla/mux"
 )
 
 // helper funtion - migrate up/ down using goose
@@ -105,6 +108,17 @@ func startTestServer(t *testing.T) (*http.Server, *db.DB) {
 
 	user := models.NewUserService(dbConn.Queries)
 	auth := handlers.NewAuthHandler(dbConn.DB, user, jwtMgr)
+
+	router := mux.NewRouter()
+	router.HandleFunc("/api/auth/register", auth.RegisterUser).Methods("POST")
+
+	server := httptest.NewUnstartedServer(router)
+	listener, _ := net.Listen("tcp", "127.0.0.1:0")
+	server.Listener = listener
+	server.Start()
+	t.Cleanup(server.Close)
+
+	return server, dbConn
 }
 
 //Register - t.run success, duplicate email/username, missing(email, username, password), bad JSON, user exists
