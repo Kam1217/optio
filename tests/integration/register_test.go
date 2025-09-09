@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/Kam1217/optio/db"
+	"github.com/Kam1217/optio/internal/auth/handlers"
+	"github.com/Kam1217/optio/internal/auth/middleware"
+	"github.com/Kam1217/optio/internal/auth/models"
 )
 
 // helper funtion - migrate up/ down using goose
@@ -94,6 +97,14 @@ func startTestServer(t *testing.T) (*http.Server, *db.DB) {
 		_, _ = dbConn.DB.ExecContext(context.Background(), `TRUNCATE TABLE users RESTART IDENTITY`)
 	})
 
+	secretJWT := os.Getenv("JWT_SECRET")
+	if secretJWT == "" {
+		secretJWT = "testsecret"
+	}
+	jwtMgr := middleware.NewJWTManager(secretJWT, "optio", "optio-api", 15*time.Minute)
+
+	user := models.NewUserService(dbConn.Queries)
+	auth := handlers.NewAuthHandler(dbConn.DB, user, jwtMgr)
 }
 
 //Register - t.run success, duplicate email/username, missing(email, username, password), bad JSON, user exists
