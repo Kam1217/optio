@@ -3,7 +3,6 @@ package integration
 import (
 	"context"
 	"net"
-	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
@@ -41,7 +40,7 @@ func gooseDown(t *testing.T, dir string) {
 }
 
 // Start DB
-func startTestServer(t *testing.T) (*http.Server, *db.DB) {
+func startTestServer(t *testing.T) (*httptest.Server, *db.DB) {
 	t.Helper()
 
 	gooseDown(t, migrationDir)
