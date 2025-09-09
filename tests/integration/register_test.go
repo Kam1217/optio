@@ -143,6 +143,12 @@ func TestRegister(t *testing.T) {
 	if res.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d body:%s", res.Code, res.Body)
 	}
+	var ok AuthResponse
+	mustJSON(t, res.Body, &ok)
+	if ok.Token == "" || ok.User.Username != "test1" || ok.User.Email != "test1@example.com" {
+		t.Fatalf("bad response: %+v", ok)
+	}
+	//
 }
 
 //helpers
