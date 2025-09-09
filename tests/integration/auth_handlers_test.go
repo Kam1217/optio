@@ -235,6 +235,11 @@ func TestLogin(t *testing.T) {
 	}
 
 	//Bad password
+	badPasswordBody := `{"identifier": "test3", "password":"wrong"}`
+	badPasswordRes := postJSON(t, base+"/api/auth/login", badPasswordBody)
+	if badPasswordRes.Code != http.StatusUnauthorized {
+		t.Fatalf("wrong password: want 401, got %d body:%s", badPasswordRes.Code, badPasswordRes.Body)
+	}
 
 	//Missing fields
 
