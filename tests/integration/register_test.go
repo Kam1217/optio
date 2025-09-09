@@ -181,6 +181,10 @@ func TestRegister(t *testing.T) {
 	}
 
 	//invalid JSON
+	res = postRaw(t, base+"/api/auth/register", `{"username":"x","email":"x@example.com","password":"y"`, "application/json")
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("invalid JSON: want 400, got %d body=%s", res.Code, res.Body)
+	}
 }
 
 //helpers
