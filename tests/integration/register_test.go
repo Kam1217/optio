@@ -157,7 +157,7 @@ func TestRegister(t *testing.T) {
 	//Successful register
 	res := postJSON(t, base+"/api/auth/register", `{"username":"test1", "email":"test1@example.com", "password":"test123"}`)
 	if res.Code != http.StatusOK {
-		t.Fatalf("succesful register, want 200, got %d body:%s", res.Code, res.Body)
+		t.Fatalf("succesful register: want 200, got %d body:%s", res.Code, res.Body)
 	}
 	var ok AuthResponse
 	mustJSON(t, res.Body, &ok)
@@ -167,14 +167,18 @@ func TestRegister(t *testing.T) {
 	//duplicate email
 	res = postJSON(t, base+"/api/auth/register", `{"username":"test2", "email":"test1@example.com", "password":"test123"}`)
 	if res.Code != http.StatusConflict {
-		t.Fatalf("duplicate email, want 409, got %d body:%s", res.Code, res.Body)
+		t.Fatalf("duplicate email: want 409, got %d body:%s", res.Code, res.Body)
 	}
 	//duplicate username
 	res = postJSON(t, base+"/api/auth/register", `{"username":"test1", "email":"test2@example.com", "password":"test123"}`)
 	if res.Code != http.StatusConflict {
-		t.Fatalf("duplicate username, want 409, got %d body:%s", res.Code, res.Body)
+		t.Fatalf("duplicate username: want 409, got %d body:%s", res.Code, res.Body)
 	}
 	//missing fields
+	res = postJSON(t, base+"/api/auth/register", `{"username":"", "email":"", "password":""}`)
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("missing field: want 400, got %d body:%s", res.Code, res.Body)
+	}
 
 	//invalid JSON
 }
