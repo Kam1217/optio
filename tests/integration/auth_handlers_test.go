@@ -188,24 +188,12 @@ func TestRegister(t *testing.T) {
 	}
 }
 
-// Login test - Success login with username/email, bad username/email, bad password, missing fields, token works(profile)
+// Login test - Success login with username/email, bad username/email, bad password, missing fields
 func TestLogin(t *testing.T) {
 	server, _ := startTestServer(t)
 	base := server.URL
 
-	regBody := `{"username":"test3", "email":"test3@example.com","password":"test123"}`
-	regRes := postJSON(t, base+"/api/auth/register", regBody)
-	if regRes.Code != 200 {
-		t.Fatalf("register: want 200, got %d body:%s", regRes.Code, regRes.Body)
-	}
-	//Success login username
-	loginBody := `{"identifier":"test3","password":"test123"}`
-	loginRes := postJSON(t, base+"/api/auth/login", loginBody)
-	if loginRes.Code != 200 {
-		t.Fatalf("succesfull username login: want 200, got %d body: %s", loginRes.Code, loginRes.Body)
-	}
-
-	var login struct {
+	type LoginResponse struct {
 		Token string `json:"token"`
 		User  struct {
 			Username string `json:"username"`
@@ -213,13 +201,25 @@ func TestLogin(t *testing.T) {
 		} `json:"user"`
 	}
 
-	if err := json.Unmarshal([]byte(loginRes.Body), &login); err != nil {
-		t.Fatalf("unmarshal login: %v", err)
+	regBody := `{"username":"test3", "email":"test3@example.com","password":"test123"}`
+	regRes := postJSON(t, base+"/api/auth/register", regBody)
+	if regRes.Code != 200 {
+		t.Fatalf("register: want 200, got %d body:%s", regRes.Code, regRes.Body)
 	}
 
+	//Success login username
+	loginBody := `{"identifier":"test3","password":"test123"}`
+	loginRes := postJSON(t, base+"/api/auth/login", loginBody)
+	if loginRes.Code != 200 {
+		t.Fatalf("succesfull username login: want 200, got %d body: %s", loginRes.Code, loginRes.Body)
+	}
+
+	var login LoginResponse
+	mustJSON(t, loginRes.Body, &login)
 	if login.Token == "" || login.User.Username != "test3" {
 		t.Fatalf("bad login response: %v", login)
 	}
+
 	//Success login email
 	loginBody2 := `{"identifier":"test3@example.com", "password":"test123"}`
 	loginRes2 := postJSON(t, base+"/api/auth/login", loginBody2)
@@ -247,7 +247,6 @@ func TestLogin(t *testing.T) {
 	if missingFieldRes.Code != http.StatusBadRequest {
 		t.Fatalf("missing fields: want 400, got %d body:%s", missingFieldRes.Code, missingFieldRes.Body)
 	}
-	//Token works
 }
 
 // helpers
