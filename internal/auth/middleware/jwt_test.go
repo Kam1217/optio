@@ -45,5 +45,17 @@ func TestGenerateAndValidateJWT_Success(t *testing.T) {
 	if claims.Subject != uid.String() {
 		t.Fatalf("subject mismatch")
 	}
+}
 
+func TestValidateJWT_fail(t *testing.T) {
+	t.Run("wrong secret", func(t *testing.T) {
+		uid := uuid.New()
+		correct := newMgr()
+		wrong := NewJWTManager("wrongsecret", "tester", "client", time.Minute*15)
+
+		token, _ := correct.GenerateJWT(uid, "username")
+		if _, err := wrong.ValidateJWT(token); err == nil {
+			t.Fatalf("expected error with wrong secret")
+		}
+	})
 }
