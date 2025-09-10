@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -56,6 +57,29 @@ func TestValidateJWT_fail(t *testing.T) {
 		token, _ := correct.GenerateJWT(uid, "username")
 		if _, err := wrong.ValidateJWT(token); err == nil {
 			t.Fatalf("expected error with wrong secret")
+		}
+	})
+
+	t.Run("wrong signing method", func(t *testing.T) {
+		m := newMgr()
+		uid := uuid.New()
+		claims := &Claims{
+			UserID:   uid,
+			Username: "username",
+			RegisteredClaims: jwt.RegisteredClaims{
+				Issuer:    m.issuer,
+				Subject:   uid.String(),
+				Audience:  []string{m.audience},
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+				NotBefore: jwt.NewNumericDate(time.Now().Add(-time.Minute)),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+				ID:        uuid.NewString(),
+			},
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+		signed, _ := token.SignedString([]byte("irrelevant"))
+		if _, err := m.ValidateJWT(signed); err == nil {
+			t.Fatalf("expected error for wrong signing method")
 		}
 	})
 }
