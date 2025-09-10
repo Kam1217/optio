@@ -119,4 +119,11 @@ func TestValidateJWT_fail(t *testing.T) {
 			t.Fatalf("expected not valid yet error")
 		}
 	})
+
+	t.Run("malformed token", func(t *testing.T) {
+		m := newMgr()
+		if _, err := m.ValidateJWT("not a JWT"); err == nil {
+			t.Fatalf("expected parse error")
+		}
+	})
 }
