@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -37,4 +38,12 @@ func TestGenerateAndValidateJWT_Success(t *testing.T) {
 	if claims.Issuer != "tester" {
 		t.Fatalf("issuer mismatch: got %v, want tester", claims.Issuer)
 	}
+	found := slices.Contains(claims.Audience, "client")
+	if !found {
+		t.Fatalf("audience mismatch: got %v, want client", claims.Audience)
+	}
+	if claims.Subject != uid.String() {
+		t.Fatalf("subject mismatch")
+	}
+
 }
