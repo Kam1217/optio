@@ -169,4 +169,14 @@ func TestJwtMiddleware(t *testing.T) {
 		}
 	})
 
+	t.Run("missing auth header", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("want 401, got %v", w.Code)
+		}
+	})
 }
