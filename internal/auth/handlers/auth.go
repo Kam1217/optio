@@ -61,7 +61,6 @@ func (h *AuthHandler) toUserResponseFromCreate(u *database.CreateUserRow) UserRe
 	}
 }
 
-
 func (h *AuthHandler) toUserFromLogin(user *database.GetUserForLoginRow) UserResponse {
 	return UserResponse{
 		ID:       user.ID,
