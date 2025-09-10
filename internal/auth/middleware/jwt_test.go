@@ -82,4 +82,13 @@ func TestValidateJWT_fail(t *testing.T) {
 			t.Fatalf("expected error for wrong signing method")
 		}
 	})
+
+	t.Run("expired token", func(t *testing.T) {
+		m := NewJWTManager("supersecret", "tester", "client", -time.Hour)
+		uid := uuid.New()
+		token, _ := m.GenerateJWT(uid, "username")
+		if _, err := m.ValidateJWT(token); err == nil {
+			t.Fatalf("expected expired error")
+		}
+	})
 }
