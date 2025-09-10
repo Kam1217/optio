@@ -203,4 +203,19 @@ func TestJwtMiddleware(t *testing.T) {
 			t.Fatalf("want 401, got %v", w.Code)
 		}
 	})
+
+	t.Run("case-insensitive bearer and extra spaces handled", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.Header.Set("Authorization", "bEaReR   "+token)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d want 200", w.Code)
+		}
+		if gotID != uid || gotUser != username {
+			t.Fatalf("context values not set after mixed case bearer: id=%v user=%q", gotID, gotUser)
+		}
+	})
 }
