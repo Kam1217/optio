@@ -34,4 +34,7 @@ func TestGenerateAndValidateJWT_Success(t *testing.T) {
 	if claims.Username != username {
 		t.Fatalf("username mismatch: got %v, want %v", claims.Username, username)
 	}
+	if claims.Issuer != "tester" {
+		t.Fatalf("issuer mismatch: got %v, want tester", claims.Issuer)
+	}
 }
