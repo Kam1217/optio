@@ -191,4 +191,16 @@ func TestJwtMiddleware(t *testing.T) {
 			t.Fatalf("want 401, got %v", w.Code)
 		}
 	})
+
+	t.Run("invalid token", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.Header.Set("Authorization", " Bearer invalid ")
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("want 401, got %v", w.Code)
+		}
+	})
 }
