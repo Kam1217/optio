@@ -91,4 +91,32 @@ func TestValidateJWT_fail(t *testing.T) {
 			t.Fatalf("expected expired error")
 		}
 	})
+
+	t.Run("not valid yet", func(t *testing.T) {
+		m := newMgr()
+		uid := uuid.New()
+		now := time.Now()
+		claims := &Claims{
+			UserID:   uid,
+			Username: "username",
+			RegisteredClaims: jwt.RegisteredClaims{
+				Issuer:    m.issuer,
+				Subject:   uid.String(),
+				Audience:  []string{m.audience},
+				ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+				NotBefore: jwt.NewNumericDate(now.Add(10 * time.Minute)),
+				IssuedAt:  jwt.NewNumericDate(now),
+				ID:        uuid.NewString(),
+			},
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		signed, err := token.SignedString(m.secret)
+		if err != nil {
+			t.Fatalf("sign: %v", err)
+		}
+
+		if _, err := m.ValidateJWT(signed); err == nil {
+			t.Fatalf("expected not valid yet error")
+		}
+	})
 }
