@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"slices"
 	"testing"
 	"time"
@@ -126,4 +128,45 @@ func TestValidateJWT_fail(t *testing.T) {
 			t.Fatalf("expected parse error")
 		}
 	})
+}
+
+func TestJwtMiddleware(t *testing.T) {
+	m := newMgr()
+	uid := uuid.New()
+	username := "username"
+	token, err := m.GenerateJWT(uid, username)
+	if err != nil {
+		t.Fatalf("GenerateJWT: %v", err)
+	}
+
+	var gotID uuid.UUID
+	var gotUser string
+
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if id, ok := UserIDFromCtx(r.Context()); ok {
+			gotID = id
+		}
+		if u, ok := UsernameFromCtx(r.Context()); ok {
+			gotUser = u
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	handler := m.JWTMiddleware(next)
+
+	t.Run("success with bearer token", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+
+		handler.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d want 200", w.Code)
+		}
+		if gotID != uid || gotUser != username {
+			t.Fatalf("context values not set: id=%v user=%q", gotID, gotUser)
+		}
+	})
+
 }
