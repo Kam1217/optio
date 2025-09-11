@@ -33,11 +33,14 @@ func TestMain(m *testing.M) {
 
 type postgresContainer struct {
 	testcontainers.Container
-	DbUrl string
+	DbUrl    string
+	DbName   string
+	Password string
+	Port     string
 }
 
 func startPostgresContainer(ctx context.Context) (*postgresContainer, error) {
-	dbName := "postgres"
+	dbName := "optio"
 	port := "5432/tcp"
 	password := "example"
 	var dbUrl string
@@ -50,6 +53,7 @@ func startPostgresContainer(ctx context.Context) (*postgresContainer, error) {
 		Image:        "postgres:17",
 		ExposedPorts: []string{port},
 		Env: map[string]string{
+			"POSTGRES_DB":       dbName,
 			"POSTGRES_PASSWORD": password,
 		},
 		WaitingFor: wait.ForSQL(nat.Port(port), "postgres", dbURLFunc),
@@ -63,9 +67,17 @@ func startPostgresContainer(ctx context.Context) (*postgresContainer, error) {
 		return nil, err
 	}
 
+	mappedPort, err := container.MappedPort(ctx, nat.Port(port))
+	if err != nil {
+		return nil, err
+	}
+
 	return &postgresContainer{
 		Container: container,
+		DbName:    dbName,
 		DbUrl:     dbUrl,
+		Port:      mappedPort.Port(),
+		Password:  password,
 	}, nil
 }
 
@@ -81,60 +93,64 @@ func gooseUp(t *testing.T, dir, dbUrl string) {
 	}
 }
 
-func gooseDown(t *testing.T, dir, dbUrl string) {
-	t.Helper()
-	cmd := exec.Command("goose", "-dir", dir, "postgres", dbUrl, "down-to", "0")
-	cmd.Env = os.Environ()
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("goose down: %v\n%s", err, out)
-	}
-}
+// func gooseDown(t *testing.T, dir, dbUrl string) {
+// 	t.Helper()
+// 	cmd := exec.Command("goose", "-dir", dir, "postgres", dbUrl, "down-to", "0")
+// 	cmd.Env = os.Environ()
+// 	out, err := cmd.CombinedOutput()
+// 	if err != nil {
+// 		t.Fatalf("goose down: %v\n%s", err, out)
+// 	}
+// }
 
-func startTestServer(t *testing.T, dbUrl string) (*httptest.Server, *db.DB) {
+func startTestServer(t *testing.T, dbContainer *postgresContainer) (*httptest.Server, *db.DB) {
 	t.Helper()
 
 	// gooseDown(t, migrationDir, c.DbUrl)
-	gooseUp(t, migrationDir, dbUrl)
+	gooseUp(t, migrationDir, dbContainer.DbUrl)
 
-	dbName := os.Getenv("DB_NAME")
-	if dbName == "" {
-		dbName = "optio_test"
-	}
-	dbHost := os.Getenv("DB_HOST")
-	if dbHost == "" {
-		dbHost = "localhost"
-	}
-	dbPort := os.Getenv("DB_PORT")
-	if dbPort == "" {
-		dbPort = "5432"
-	}
-	dbUser := os.Getenv("DB_USER")
-	if dbUser == "" {
-		dbUser = "postgres"
-	}
-	dbPass := os.Getenv("DB_PASSWORD")
-	if dbPass == "" {
-		dbPass = "postgres"
-	}
-	sslMode := os.Getenv("DB_SSLMODE")
-	if sslMode == "" {
-		sslMode = "disable"
-	}
+	// dbName := os.Getenv("DB_NAME")
+	// if dbName == "" {
+	// 	dbName = "optio_test"
+	// }
+	// dbHost := os.Getenv("DB_HOST")
+	// if dbHost == "" {
+	// 	dbHost = "localhost"
+	// }
+	// dbPort := os.Getenv("DB_PORT")
+	// if dbPort == "" {
+	// 	dbPort = "5432"
+	// }
+	// dbUser := os.Getenv("DB_USER")
+	// if dbUser == "" {
+	// 	dbUser = "postgres"
+	// }
+	// dbPass := os.Getenv("DB_PASSWORD")
+	// if dbPass == "" {
+	// 	dbPass = "postgres"
+	// }
+	// sslMode := os.Getenv("DB_SSLMODE")
+	// if sslMode == "" {
+	// 	sslMode = "disable"
+	// }
 
-	timezone := os.Getenv("DB_TIMEZONE")
-	if timezone == "" {
-		timezone = "UTC"
-	}
+	// timezone := os.Getenv("DB_TIMEZONE")
+	// if timezone == "" {
+	// 	timezone = "UTC"
+	// }
 
 	cfg := db.Config{
-		DBName:   dbName,
-		Host:     dbHost,
-		Port:     dbPort,
-		User:     dbUser,
-		Password: dbPass,
-		SSLMode:  sslMode,
-		TimeZone: timezone,
+		Host:     "localhost",
+		Password: dbContainer.Password,
+		Port:     dbContainer.Port,
+		DBName:   dbContainer.DbName,
+		// DBName:   dbName,
+		// Host:     dbHost,
+		// Port:     dbPort,
+		User: "postgres",
+		// Password: dbPass,
+		// SSLMode:  sslMode,
+		// TimeZone: timezone,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -184,7 +200,7 @@ func TestRegister(t *testing.T) {
 	}
 	defer testcontainers.CleanupContainer(t, dbContainer)
 
-	server, _ := startTestServer(t, dbContainer.DbUrl)
+	server, _ := startTestServer(t, dbContainer)
 	base := server.URL
 
 	res := postJSON(t, base+"/api/auth/register", `{"username":"test1", "email":"test1@example.com", "password":"test123"}`)
@@ -222,7 +238,7 @@ func TestLogin(t *testing.T) {
 	}
 	defer testcontainers.CleanupContainer(t, dbContainer)
 
-	server, _ := startTestServer(t, dbContainer.DbUrl)
+	server, _ := startTestServer(t, dbContainer)
 	base := server.URL
 
 	regBody := `{"username":"test3", "email":"test3@example.com","password":"test123"}`
