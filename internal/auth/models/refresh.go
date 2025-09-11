@@ -2,6 +2,8 @@ package models
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"time"
 
 	"github.com/Kam1217/optio/internal/auth/middleware"
@@ -32,5 +34,17 @@ func (r *RefreshService) IssueRefreshToken(ctx context.Context, userID uuid.UUID
 		UserAgent: ua,
 		Ip:        ip,
 	})
+	if err != nil {
+		return "", err
+	}
 	return plain, nil
+}
+
+func (r *RefreshService) RotateRefreshToken(ctx context.Context, oldPlain string, userPasswordChangedAt *time.Time, ua, ip string) (newPlain string, userID uuid.UUID, err error) {
+
+}
+
+func hashRefresh(plain string) string {
+	sum := sha256.Sum256([]byte(plain))
+	return base64.RawURLEncoding.EncodeToString(sum[:])
 }
