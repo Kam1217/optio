@@ -54,16 +54,13 @@ func main() {
 
 	userService := models.NewUserService(dbConn.Queries)
 	authHandler := handlers.NewAuthHandler(dbConn.DB, userService, jwtMgr)
+	refreshTTL := 30 * 24 * time.Hour
+	refreshSvc := models.NewRefreshService(dbConn.Queries, refreshTTL)
+	authHandler.Refresh = refreshSvc
+	authHandler.RefreshTTL = refreshTTL
+	authHandler.CookieDomain = ""
 
 	router := setUpRouts(authHandler, jwtMgr)
-
-	log.Printf("Server starting on port %s", port)
-	log.Printf("Available endpoints:")
-	log.Printf("  POST /api/auth/register - Register new user")
-	log.Printf("  POST /api/auth/login    - Login user")
-	log.Printf("  GET  /api/auth/profile  - Get user profile (protected)")
-	log.Printf("  GET  /api/users         - List users (protected)")
-	log.Printf("  GET  /health            - Health check")
 
 	if err := http.ListenAndServe(":"+port, router); err != nil {
 		log.Fatalf("Listen and serve: %v", err)
@@ -77,6 +74,8 @@ func setUpRouts(authHandler *handlers.AuthHandler, jwtMgr *middleware.JWTManager
 	router.HandleFunc("/api/auth/register", authHandler.RegisterUser).Methods("POST")
 	router.HandleFunc("/api/auth/login", authHandler.LoginUser).Methods("POST")
 	router.Handle("/api/auth/profile", jwtMgr.JWTMiddleware(http.HandlerFunc(authHandler.Profile))).Methods("GET")
+	router.HandleFunc("/api/auth/refresh", authHandler.RefreshSession).Methods("POST")
+	router.HandleFunc("/api/auth/logout", authHandler.Logout).Methods("POST")
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -132,10 +131,3 @@ func durEnv(key, _ string) time.Duration {
 	}
 	return valueTime
 }
-
-//REFRESH TOKEN
-//SEND EMAIL TO VERIFY
-//BE ABLE TO LOGIN VIA EMAIL OR USERNAME
-//CLEAN UP
-//GOOGLE LOGIN
-//STEAM LOGIN

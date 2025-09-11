@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Kam1217/optio/internal/auth/middleware"
@@ -14,9 +15,12 @@ import (
 )
 
 type AuthHandler struct {
-	DB          *sql.DB
-	UserService *models.UserService
-	JWT         *middleware.JWTManager
+	DB           *sql.DB
+	UserService  *models.UserService
+	Refresh      *models.RefreshService
+	JWT          *middleware.JWTManager
+	RefreshTTL   time.Duration
+	CookieDomain string
 }
 
 func NewAuthHandler(db *sql.DB, userService *models.UserService, jwtManager *middleware.JWTManager) *AuthHandler {
@@ -112,6 +116,14 @@ func (h *AuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error generating token", http.StatusInternalServerError)
 		return
 	}
+
+	rtPlain, err := h.Refresh.IssueRefreshToken(ctx, user.ID, r.UserAgent(), clientIP(r))
+	if err != nil {
+		http.Error(w, "Error issuing refresh", http.StatusInternalServerError)
+		return
+	}
+	setRefreshCookie(w, rtPlain, h.RefreshTTL, h.CookieDomain)
+
 	response := AuthResponse{
 		Token: token,
 		User:  h.toUserResponseFromCreate(user),
@@ -150,6 +162,13 @@ func (h *AuthHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rtPlain, err := h.Refresh.IssueRefreshToken(ctx, user.ID, r.UserAgent(), clientIP(r))
+	if err != nil {
+		http.Error(w, "Error issuing refresh", http.StatusInternalServerError)
+		return
+	}
+	setRefreshCookie(w, rtPlain, h.RefreshTTL, h.CookieDomain)
+
 	response := AuthResponse{
 		Token: token,
 		User:  h.toUserFromLogin(user),
@@ -180,8 +199,89 @@ func (h *AuthHandler) Profile(w http.ResponseWriter, r *http.Request) {
 	h.respondWithJSON(w, h.toUserGetUserByIDRow(user), http.StatusOK)
 }
 
+func (h *AuthHandler) RefreshSession(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	c, err := r.Cookie("refresh_token")
+	if err != nil || c.Value == "" {
+		http.Error(w, "Missing refresh token", http.StatusUnauthorized)
+		return
+	}
+
+	newPlain, userID, err := h.Refresh.RotateRefreshToken(ctx, c.Value, nil, r.UserAgent(), clientIP(r))
+	if err != nil {
+		http.Error(w, "Invalid refresh", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.UserService.GetUserByID(ctx, userID)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	token, err := h.JWT.GenerateJWT(user.ID, user.Username)
+	if err != nil {
+		http.Error(w, "Error generating token", http.StatusInternalServerError)
+		return
+	}
+	setRefreshCookie(w, newPlain, h.RefreshTTL, h.CookieDomain)
+	response := AuthResponse{
+		Token: token,
+		User:  h.toUserGetUserByIDRow(user),
+	}
+
+	h.respondWithJSON(w, response, http.StatusOK)
+}
+
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	if c, err := r.Cookie("refresh_token"); err == nil && c.Value != "" {
+		_, _, _ = h.Refresh.RotateRefreshToken(r.Context(), c.Value, nil, r.UserAgent(), clientIP(r))
+	}
+	clearRefreshCookie(w, h.CookieDomain)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func setRefreshCookie(w http.ResponseWriter, val string, ttl time.Duration, domain string) {
+	c := &http.Cookie{
+		Name:     "refresh_token",
+		Value:    val,
+		Path:     "/api/auth/refresh",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(ttl),
+	}
+	if domain != "" {
+		c.Domain = domain
+	}
+	http.SetCookie(w, c)
+}
+func clearRefreshCookie(w http.ResponseWriter, domain string) {
+	c := &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/api/auth/refresh",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	}
+	if domain != "" {
+		c.Domain = domain
+	}
+	http.SetCookie(w, c)
+}
+
 func (h *AuthHandler) respondWithJSON(w http.ResponseWriter, data any, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(data)
+}
+
+func clientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		return xff
+	}
+	host, _, _ := strings.Cut(r.RemoteAddr, ":")
+	return host
 }
