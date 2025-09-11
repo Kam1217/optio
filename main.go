@@ -54,6 +54,11 @@ func main() {
 
 	userService := models.NewUserService(dbConn.Queries)
 	authHandler := handlers.NewAuthHandler(dbConn.DB, userService, jwtMgr)
+	refreshTTL := 30 * 24 * time.Hour
+	refreshSvc := models.NewRefreshService(dbConn.Queries, refreshTTL)
+	authHandler.Refresh = refreshSvc
+	authHandler.RefreshTTL = refreshTTL
+	authHandler.CookieDomain = ""
 
 	router := setUpRouts(authHandler, jwtMgr)
 

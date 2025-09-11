@@ -231,7 +231,6 @@ func (h *AuthHandler) RefreshSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.respondWithJSON(w, response, http.StatusOK)
-
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
