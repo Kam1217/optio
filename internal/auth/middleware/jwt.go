@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"strings"
@@ -119,4 +121,8 @@ func (m *JWTManager) JWTMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-//TODO: Refresh Token
+func MakeRefreshToken() string {
+	token := make([]byte, 32)
+	rand.Read(token)
+	return hex.EncodeToString(token)
+}
