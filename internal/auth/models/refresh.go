@@ -51,7 +51,7 @@ func (r *RefreshService) RotateRefreshToken(ctx context.Context, oldPlain string
 
 	if userPasswordChangedAt != nil && userPasswordChangedAt.After(refreshToken.IssuedAt) {
 		_ = r.queries.RevokeRefreshTokenByID(ctx, refreshToken.ID)
-		return "", uuid.Nil, fmt.Errorf("invalid refresh")
+		return "", uuid.Nil, fmt.Errorf("invalid refresh token")
 	}
 
 	_ = r.queries.RevokeRefreshTokenByID(ctx, refreshToken.ID)
