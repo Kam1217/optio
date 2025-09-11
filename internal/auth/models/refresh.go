@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"time"
 
 	"github.com/Kam1217/optio/internal/auth/middleware"
@@ -41,7 +42,36 @@ func (r *RefreshService) IssueRefreshToken(ctx context.Context, userID uuid.UUID
 }
 
 func (r *RefreshService) RotateRefreshToken(ctx context.Context, oldPlain string, userPasswordChangedAt *time.Time, ua, ip string) (newPlain string, userID uuid.UUID, err error) {
+	hash := hashRefresh(oldPlain)
+	now := time.Now()
+	refreshToken, err := r.queries.GetActiveRefreshTokenByHash(ctx, hash)
+	if err != nil {
+		return "", uuid.Nil, err
+	}
 
+	if userPasswordChangedAt != nil && userPasswordChangedAt.After(refreshToken.IssuedAt) {
+		_ = r.queries.RevokeRefreshTokenByID(ctx, refreshToken.ID)
+		return "", uuid.Nil, fmt.Errorf("invalid refresh")
+	}
+
+	_ = r.queries.RevokeRefreshTokenByID(ctx, refreshToken.ID)
+	newPlain, newHash, err := middleware.MakeRefreshToken()
+	if err != nil {
+		return "", uuid.Nil, err
+	}
+
+	_, err = r.queries.CreateRefreshToken(ctx, database.CreateRefreshTokenParams{
+		UserID:    userID,
+		TokenHash: newHash,
+		IssuedAt:  now,
+		ExpiresAt: now.Add(r.ttl),
+		UserAgent: ua,
+		Ip:        ip,
+	})
+	if err != nil {
+		return "", uuid.Nil, err
+	}
+	return newPlain, refreshToken.UserID, nil
 }
 
 func hashRefresh(plain string) string {
