@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -17,9 +18,12 @@ import (
 	"github.com/Kam1217/optio/internal/auth/handlers"
 	"github.com/Kam1217/optio/internal/auth/middleware"
 	"github.com/Kam1217/optio/internal/auth/models"
+	"github.com/docker/go-connections/nat"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestMain(m *testing.M) {
@@ -27,16 +31,49 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-const migrationDir = "../../sql/schema"
+type postgresContainer struct {
+	testcontainers.Container
+	DbUrl string
+}
 
-func gooseUp(t *testing.T, dir string) {
-	t.Helper()
-	dsn := os.Getenv("DB_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("DB_TEST_DSN not set")
+func startPostgresContainer(ctx context.Context) (*postgresContainer, error) {
+	dbName := "postgres"
+	port := "5432/tcp"
+	password := "example"
+	var dbUrl string
+	dbURLFunc := func(host string, port nat.Port) string {
+		url := fmt.Sprintf("postgres://postgres:%s@%s:%s/%s?sslmode=disable", password, host, port.Port(), dbName)
+		dbUrl = url
+		return url
+	}
+	req := testcontainers.ContainerRequest{
+		Image:        "postgres:17",
+		ExposedPorts: []string{port},
+		Env: map[string]string{
+			"POSTGRES_PASSWORD": password,
+		},
+		WaitingFor: wait.ForSQL(nat.Port(port), "postgres", dbURLFunc),
 	}
 
-	cmd := exec.Command("goose", "-dir", dir, "postgres", dsn, "up")
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &postgresContainer{
+		Container: container,
+		DbUrl:     dbUrl,
+	}, nil
+}
+
+const migrationDir = "../../sql/schema"
+
+func gooseUp(t *testing.T, dir, dbUrl string) {
+	t.Helper()
+	cmd := exec.Command("goose", "-dir", dir, "postgres", dbUrl, "up")
 	cmd.Env = os.Environ()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -44,13 +81,9 @@ func gooseUp(t *testing.T, dir string) {
 	}
 }
 
-func gooseDown(t *testing.T, dir string) {
+func gooseDown(t *testing.T, dir, dbUrl string) {
 	t.Helper()
-	dsn := os.Getenv("DB_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("DB_TEST_DSN not set")
-	}
-	cmd := exec.Command("goose", "-dir", dir, "postgres", dsn, "down-to", "0")
+	cmd := exec.Command("goose", "-dir", dir, "postgres", dbUrl, "down-to", "0")
 	cmd.Env = os.Environ()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -58,11 +91,11 @@ func gooseDown(t *testing.T, dir string) {
 	}
 }
 
-func startTestServer(t *testing.T) (*httptest.Server, *db.DB) {
+func startTestServer(t *testing.T, dbUrl string) (*httptest.Server, *db.DB) {
 	t.Helper()
 
-	gooseDown(t, migrationDir)
-	gooseUp(t, migrationDir)
+	// gooseDown(t, migrationDir, c.DbUrl)
+	gooseUp(t, migrationDir, dbUrl)
 
 	dbName := os.Getenv("DB_NAME")
 	if dbName == "" {
@@ -145,7 +178,13 @@ func startTestServer(t *testing.T) (*httptest.Server, *db.DB) {
 }
 
 func TestRegister(t *testing.T) {
-	server, _ := startTestServer(t)
+	dbContainer, err := startPostgresContainer(context.Background())
+	if err != nil {
+		t.Fatalf("%s", err.Error())
+	}
+	defer testcontainers.CleanupContainer(t, dbContainer)
+
+	server, _ := startTestServer(t, dbContainer.DbUrl)
 	base := server.URL
 
 	res := postJSON(t, base+"/api/auth/register", `{"username":"test1", "email":"test1@example.com", "password":"test123"}`)
@@ -177,7 +216,13 @@ func TestRegister(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	server, _ := startTestServer(t)
+	dbContainer, err := startPostgresContainer(context.Background())
+	if err != nil {
+		t.Fatalf("%s", err.Error())
+	}
+	defer testcontainers.CleanupContainer(t, dbContainer)
+
+	server, _ := startTestServer(t, dbContainer.DbUrl)
 	base := server.URL
 
 	regBody := `{"username":"test3", "email":"test3@example.com","password":"test123"}`
