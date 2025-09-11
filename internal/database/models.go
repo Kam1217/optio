@@ -18,8 +18,8 @@ type RefreshToken struct {
 	IssuedAt  time.Time
 	ExpiresAt time.Time
 	RevokedAt sql.NullTime
-	UserAgent sql.NullString
-	Ip        sql.NullString
+	UserAgent string
+	Ip        string
 }
 
 type User struct {

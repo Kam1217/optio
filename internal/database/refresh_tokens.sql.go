@@ -31,8 +31,8 @@ type CreateRefreshTokenParams struct {
 	TokenHash string
 	IssuedAt  time.Time
 	ExpiresAt time.Time
-	UserAgent sql.NullString
-	Ip        sql.NullString
+	UserAgent string
+	Ip        string
 }
 
 type CreateRefreshTokenRow struct {
@@ -41,8 +41,8 @@ type CreateRefreshTokenRow struct {
 	IssuedAt  time.Time
 	ExpiresAt time.Time
 	RevokedAt sql.NullTime
-	UserAgent sql.NullString
-	Ip        sql.NullString
+	UserAgent string
+	Ip        string
 }
 
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (CreateRefreshTokenRow, error) {
@@ -135,8 +135,8 @@ type ListActiveTokensForUserRow struct {
 	UserID    uuid.UUID
 	IssuedAt  time.Time
 	ExpiresAt time.Time
-	UserAgent sql.NullString
-	Ip        sql.NullString
+	UserAgent string
+	Ip        string
 }
 
 func (q *Queries) ListActiveTokensForUser(ctx context.Context, userID uuid.UUID) ([]ListActiveTokensForUserRow, error) {

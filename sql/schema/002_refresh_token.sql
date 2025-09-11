@@ -6,8 +6,8 @@ CREATE TABLE refresh_tokens(
   issued_at TIMESTAMPTZ  DEFAULT NOW() NOT NULL,
   expires_at TIMESTAMPTZ NOT NULL,
   revoked_at TIMESTAMPTZ,
-  user_agent TEXT,
-  ip TEXT
+  user_agent TEXT NOT NULL,
+  ip TEXT NOT NULL
 );
 
 -- +goose Down
