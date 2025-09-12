@@ -103,7 +103,7 @@ func startTestServer(t *testing.T, dbContainer *postgresContainer) (*httptest.Se
 		Password: dbContainer.Password,
 		Port:     dbContainer.Port,
 		DBName:   dbContainer.DbName,
-		User: "postgres",
+		User:     "postgres",
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
