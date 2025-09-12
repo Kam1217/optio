@@ -8,7 +8,6 @@ import (
 	// "crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/Kam1217/optio/internal/database"
@@ -45,7 +44,7 @@ func (r *RefreshService) IssueRefreshToken(ctx context.Context, userID uuid.UUID
 func (r *RefreshService) RotateRefreshToken(ctx context.Context, oldPlain string, userPasswordChangedAt *time.Time, ua, ip string) (newPlain string, userID uuid.UUID, err error) {
 	hash := hashRefresh(oldPlain)
 	now := time.Now()
-	h := hashRefresh(oldPlain)
+	_ = hashRefresh(oldPlain)
 	refreshToken, err := r.queries.GetActiveRefreshTokenByHash(ctx, hash)
 	if err != nil {
 		return "", uuid.Nil, err
