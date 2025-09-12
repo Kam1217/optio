@@ -207,8 +207,7 @@ func (h *AuthHandler) RefreshSession(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing refresh token", http.StatusUnauthorized)
 		return
 	}
-	log.Printf("SERVER COOKIE=%q", c.Value)
-	log.Printf("refresh cookie=%q", c.Value)
+	
 	newPlain, userID, err := h.Refresh.RotateRefreshToken(ctx, c.Value, nil, r.UserAgent(), clientIP(r))
 	if err != nil {
 		http.Error(w, "Invalid refresh", http.StatusUnauthorized)

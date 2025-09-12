@@ -28,7 +28,6 @@ func (r *RefreshService) IssueRefreshToken(ctx context.Context, userID uuid.UUID
 	plain, tokenHash := MakeRefreshToken()
 
 	now := time.Now()
-	log.Printf("issued rt hash=%s exp=%s revoked=%v", tokenHash, now.Add(r.ttl), false)
 	_, err = r.queries.CreateRefreshToken(ctx, database.CreateRefreshTokenParams{
 		UserID:    userID,
 		TokenHash: tokenHash,
@@ -47,9 +46,6 @@ func (r *RefreshService) RotateRefreshToken(ctx context.Context, oldPlain string
 	hash := hashRefresh(oldPlain)
 	now := time.Now()
 	h := hashRefresh(oldPlain)
-	// dbg, e := r.queries.GetRefreshTokenByHash(ctx, h)
-	// log.Printf("dbg exp=%s revoked=%v err=%v", dbg.ExpiresAt, dbg.RevokedAt.Valid, e)
-	log.Printf("rotate lookup hash=%s", h)
 	refreshToken, err := r.queries.GetActiveRefreshTokenByHash(ctx, hash)
 	if err != nil {
 		return "", uuid.Nil, err
