@@ -93,64 +93,17 @@ func gooseUp(t *testing.T, dir, dbUrl string) {
 	}
 }
 
-// func gooseDown(t *testing.T, dir, dbUrl string) {
-// 	t.Helper()
-// 	cmd := exec.Command("goose", "-dir", dir, "postgres", dbUrl, "down-to", "0")
-// 	cmd.Env = os.Environ()
-// 	out, err := cmd.CombinedOutput()
-// 	if err != nil {
-// 		t.Fatalf("goose down: %v\n%s", err, out)
-// 	}
-// }
-
 func startTestServer(t *testing.T, dbContainer *postgresContainer) (*httptest.Server, *db.DB) {
 	t.Helper()
 
-	// gooseDown(t, migrationDir, c.DbUrl)
 	gooseUp(t, migrationDir, dbContainer.DbUrl)
-
-	// dbName := os.Getenv("DB_NAME")
-	// if dbName == "" {
-	// 	dbName = "optio_test"
-	// }
-	// dbHost := os.Getenv("DB_HOST")
-	// if dbHost == "" {
-	// 	dbHost = "localhost"
-	// }
-	// dbPort := os.Getenv("DB_PORT")
-	// if dbPort == "" {
-	// 	dbPort = "5432"
-	// }
-	// dbUser := os.Getenv("DB_USER")
-	// if dbUser == "" {
-	// 	dbUser = "postgres"
-	// }
-	// dbPass := os.Getenv("DB_PASSWORD")
-	// if dbPass == "" {
-	// 	dbPass = "postgres"
-	// }
-	// sslMode := os.Getenv("DB_SSLMODE")
-	// if sslMode == "" {
-	// 	sslMode = "disable"
-	// }
-
-	// timezone := os.Getenv("DB_TIMEZONE")
-	// if timezone == "" {
-	// 	timezone = "UTC"
-	// }
 
 	cfg := db.Config{
 		Host:     "localhost",
 		Password: dbContainer.Password,
 		Port:     dbContainer.Port,
 		DBName:   dbContainer.DbName,
-		// DBName:   dbName,
-		// Host:     dbHost,
-		// Port:     dbPort,
 		User: "postgres",
-		// Password: dbPass,
-		// SSLMode:  sslMode,
-		// TimeZone: timezone,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
