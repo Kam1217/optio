@@ -2,9 +2,7 @@ package middleware
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
+
 	"errors"
 	"net/http"
 	"strings"
@@ -120,14 +118,4 @@ func (m *JWTManager) JWTMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		ctx = context.WithValue(ctx, ctxUsernameKey, claims.Username)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-func MakeRefreshToken() (plain, hash string, err error) {
-	token := make([]byte, 32)
-	rand.Read(token)
-	plain = base64.RawURLEncoding.EncodeToString(token)
-
-	sum := sha256.Sum256([]byte(plain))
-	hash = base64.RawURLEncoding.EncodeToString(sum[:])
-	return
 }
