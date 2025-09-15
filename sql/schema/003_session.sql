@@ -1,9 +1,9 @@
 -- +goose Up
 
-CREATE TABLE game (
-    game_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    game_code VARCHAR(10) UNIQUE NOT NULL,
-    game_name VARCHAR(250) NOT NULL,
+CREATE TABLE session (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), 
+    session_code VARCHAR(10) UNIQUE NOT NULL,
+    session_name VARCHAR(250) NOT NULL,
     creator_user_id UUID NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -12,4 +12,4 @@ CREATE TABLE game (
 );
 
 -- +goose Down
-DROP TABLE IF EXISTS game;
+DROP TABLE IF EXISTS session;

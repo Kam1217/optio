@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE EXTENSION IF NOT EXISTS citext;
 
-CREATE TABLE user (
+CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username CITEXT UNIQUE NOT NULL,
     email CITEXT UNIQUE NOT NULL,
@@ -18,4 +18,4 @@ CREATE INDEX users_not_deleted_idx ON users (deleted_at) WHERE deleted_at IS NUL
 CREATE INDEX users_created_at_id_desc_idx ON users (created_at DESC, id DESC);
 
 -- +goose Down
-DROP TABLE  IF EXISTS user;
+DROP TABLE  IF EXISTS users;
