@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TABLE refresh_tokens(
+CREATE TABLE refresh_token(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   token_hash TEXT NOT NULL UNIQUE,
@@ -11,4 +11,4 @@ CREATE TABLE refresh_tokens(
 );
 
 -- +goose Down
-DROP TABLE refresh_tokens;
+DROP TABLE refresh_token;
