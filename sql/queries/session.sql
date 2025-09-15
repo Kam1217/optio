@@ -1,10 +1,9 @@
 -- name: CreateSession :one
-INSERT INTO session (session_code, session_name, creator_user_id, status)
+INSERT INTO session (session_code, session_name, creator_user_id)
 VALUES (
     $1,
     $2,
-    $3,
-    $4
+    $3
 )
 RETURNING *;
 
