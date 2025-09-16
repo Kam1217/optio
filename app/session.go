@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -31,10 +32,7 @@ func (s *SessionService) CheckSessionCodeExists(ctx context.Context, code string
 
 func (s *SessionService) generateUniqueSessionCode(ctx context.Context) (string, error) {
 	for {
-		code, err := generateSecureCode()
-		if err != nil {
-			return "", fmt.Errorf("error generating code: %w", err)
-		}
+		code := rand.Text()
 		exists, err := s.CheckSessionCodeExists(ctx, code)
 		if err != nil {
 			return "", fmt.Errorf("error verifying if code exists: %w", err)
@@ -43,10 +41,6 @@ func (s *SessionService) generateUniqueSessionCode(ctx context.Context) (string,
 			return code, nil
 		}
 	}
-}
-
-func generateSecureCode() (string, error) {
-	return "", nil
 }
 
 //Function that generates a session code - use crypto/rand to make secure (no one brute forcing into session)
