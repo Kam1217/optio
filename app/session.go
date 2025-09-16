@@ -30,7 +30,19 @@ func (s *SessionService) CheckSessionCodeExists(ctx context.Context, code string
 }
 
 func (s *SessionService) generateUniqueSessionCode(ctx context.Context) (string, error) {
-	return "", nil
+	for {
+		code, err := generateSecureCode()
+		if err != nil {
+			return "", fmt.Errorf("error generating code: %w", err)
+		}
+		exists, err := s.CheckSessionCodeExists(ctx, code)
+		if err != nil {
+			return "", fmt.Errorf("error verifying if code exists: %w", err)
+		}
+		if !exists {
+			return code, nil
+		}
+	}
 }
 
 func generateSecureCode() (string, error) {
