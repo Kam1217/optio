@@ -10,9 +10,10 @@ import (
 
 	"github.com/Kam1217/optio/app"
 	"github.com/Kam1217/optio/db"
-	"github.com/Kam1217/optio/internal/auth/handlers"
+	authhandlers "github.com/Kam1217/optio/internal/auth/handlers"
 	"github.com/Kam1217/optio/internal/auth/middleware"
 	"github.com/Kam1217/optio/internal/auth/models"
+	sessionhandlers "github.com/Kam1217/optio/internal/session/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -54,7 +55,7 @@ func main() {
 	log.Printf("Succesfully connected to the database")
 
 	userService := models.NewUserService(dbConn.Queries)
-	authHandler := handlers.NewAuthHandler(dbConn.DB, userService, jwtMgr)
+	authHandler := authhandlers.NewAuthHandler(dbConn.DB, userService, jwtMgr)
 	refreshTTL := 30 * 24 * time.Hour
 	refreshSvc := models.NewRefreshService(dbConn.Queries, refreshTTL)
 	authHandler.Refresh = refreshSvc
@@ -74,7 +75,7 @@ func main() {
 	}
 }
 
-func setUpRouts(authHandler *handlers.AuthHandler, jwtMgr *middleware.JWTManager, sessionService *app.SessionService) *mux.Router {
+func setUpRouts(authHandler *authhandlers.AuthHandler, jwtMgr *middleware.JWTManager, sessionService *app.SessionService) *mux.Router {
 	router := mux.NewRouter()
 	router.Use(corsMiddleware)
 
@@ -84,7 +85,7 @@ func setUpRouts(authHandler *handlers.AuthHandler, jwtMgr *middleware.JWTManager
 	router.HandleFunc("/api/auth/refresh", authHandler.RefreshSession).Methods("POST")
 	router.HandleFunc("/api/auth/logout", authHandler.Logout).Methods("POST")
 
-	sessionHandler := handlers.NewSessionHandler(sessionService)
+	sessionHandler := sessionhandlers.NewSessionHandler(sessionService)
 	router.HandleFunc("/api/session", jwtMgr.JWTMiddleware(http.HandlerFunc(sessionHandler.CreateSession))).Methods("POST")
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
