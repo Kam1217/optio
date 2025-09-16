@@ -6,16 +6,18 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/Kam1217/optio/internal/database"
 )
 
 type SessionService struct {
-	queries *database.Queries
+	queries   *database.Queries
+	InviteURL string
 }
 
-func NewSessionService(queries *database.Queries) *SessionService {
-	return &SessionService{queries: queries}
+func NewSessionService(queries *database.Queries, inviteURL string) *SessionService {
+	return &SessionService{queries: queries, InviteURL: inviteURL}
 }
 
 func (s *SessionService) CheckSessionCodeExists(ctx context.Context, code string) (bool, error) {
@@ -43,12 +45,18 @@ func (s *SessionService) generateUniqueSessionCode(ctx context.Context) (string,
 	}
 }
 
-//Function that generates a session code - use crypto/rand to make secure (no one brute forcing into session)
-//Must be unique
-//Create invite link with code to send to users
-// Extract code from invite link to enter session
+func (s *SessionService) generateInviteLink(sessionCode string) (string, error) {
+	if s.InviteURL == "" {
+		return "", fmt.Errorf("invite URL is not configured")
+	}
+	link, err := url.Parse(s.InviteURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid url: %w", err)
+	}
 
-//Func:
+	q := link.Query()
+	q.Set("code", sessionCode)
+	link.RawQuery = q.Encode()
 
-//Generate random code
-//Check if already exists - if does retry - (GetSessionByCode)
+	return link.String(), nil
+}
