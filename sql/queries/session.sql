@@ -32,3 +32,8 @@ WHERE id = $1;
 UPDATE session
 SET status = $2, updated_at = NOW()
 WHERE id = $1;
+
+-- name: GetActiveSessionByCode :one
+SELECT * 
+FROM session
+WHERE session_code = $1;

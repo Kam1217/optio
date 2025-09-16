@@ -53,6 +53,27 @@ func (q *Queries) DeleteSession(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
+const getActiveSessionByCode = `-- name: GetActiveSessionByCode :one
+SELECT id, session_code, session_name, creator_user_id, created_at, updated_at, status 
+FROM session
+WHERE session_code = $1
+`
+
+func (q *Queries) GetActiveSessionByCode(ctx context.Context, sessionCode string) (Session, error) {
+	row := q.db.QueryRowContext(ctx, getActiveSessionByCode, sessionCode)
+	var i Session
+	err := row.Scan(
+		&i.ID,
+		&i.SessionCode,
+		&i.SessionName,
+		&i.CreatorUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Status,
+	)
+	return i, err
+}
+
 const getActiveSessionByID = `-- name: GetActiveSessionByID :one
 SELECT id, session_code, session_name, creator_user_id, created_at, updated_at, status 
 FROM session
