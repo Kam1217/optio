@@ -9,6 +9,7 @@ import (
 	"net/url"
 
 	"github.com/Kam1217/optio/internal/database"
+	"github.com/google/uuid"
 )
 
 type SessionService struct {
@@ -59,4 +60,27 @@ func (s *SessionService) generateInviteLink(sessionCode string) (string, error) 
 	link.RawQuery = q.Encode()
 
 	return link.String(), nil
+}
+
+func (s *SessionService) CreateSession(ctx context.Context, sessionName string, creatorID uuid.UUID) (*database.Session, string, error) {
+	sessionCode, err := s.generateUniqueSessionCode(ctx)
+	if err != nil {
+		return nil, "", fmt.Errorf("error generating session code: %w", err)
+	}
+
+	session, err := s.queries.CreateSession(ctx, database.CreateSessionParams{
+		SessionCode:   sessionCode,
+		SessionName:   sessionName,
+		CreatorUserID: creatorID,
+	})
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create session in db: %w", err)
+	}
+
+	inviteLink, err := s.generateInviteLink(sessionCode)
+	if err != nil {
+		return nil, "", fmt.Errorf("error generating invite link: %w", err)
+	}
+
+	return &session, inviteLink, nil
 }
