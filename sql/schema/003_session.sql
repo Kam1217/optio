@@ -2,7 +2,7 @@
 
 CREATE TABLE session (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(), 
-    session_code VARCHAR(10) UNIQUE NOT NULL,
+    session_code VARCHAR(100) UNIQUE NOT NULL,
     session_name VARCHAR(250) NOT NULL,
     creator_user_id UUID NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
