@@ -8,10 +8,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Kam1217/optio/app"
 	"github.com/Kam1217/optio/db"
-	"github.com/Kam1217/optio/internal/auth/handlers"
+	authhandlers "github.com/Kam1217/optio/internal/auth/handlers"
 	"github.com/Kam1217/optio/internal/auth/middleware"
 	"github.com/Kam1217/optio/internal/auth/models"
+	sessionhandlers "github.com/Kam1217/optio/internal/session/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -53,21 +55,27 @@ func main() {
 	log.Printf("Succesfully connected to the database")
 
 	userService := models.NewUserService(dbConn.Queries)
-	authHandler := handlers.NewAuthHandler(dbConn.DB, userService, jwtMgr)
+	authHandler := authhandlers.NewAuthHandler(dbConn.DB, userService, jwtMgr)
 	refreshTTL := 30 * 24 * time.Hour
 	refreshSvc := models.NewRefreshService(dbConn.Queries, refreshTTL)
 	authHandler.Refresh = refreshSvc
 	authHandler.RefreshTTL = refreshTTL
 	authHandler.CookieDomain = ""
 
-	router := setUpRouts(authHandler, jwtMgr)
+	inviteURL := os.Getenv("INVITE_BASE_URL")
+	if inviteURL == "" {
+		log.Fatalf("INVITE_BASE_URL is required for session invites")
+	}
+	sessionService := app.NewSessionService(dbConn.Queries, inviteURL)
+
+	router := setUpRouts(authHandler, jwtMgr, sessionService)
 
 	if err := http.ListenAndServe(":"+port, router); err != nil {
 		log.Fatalf("Listen and serve: %v", err)
 	}
 }
 
-func setUpRouts(authHandler *handlers.AuthHandler, jwtMgr *middleware.JWTManager) *mux.Router {
+func setUpRouts(authHandler *authhandlers.AuthHandler, jwtMgr *middleware.JWTManager, sessionService *app.SessionService) *mux.Router {
 	router := mux.NewRouter()
 	router.Use(corsMiddleware)
 
@@ -76,6 +84,9 @@ func setUpRouts(authHandler *handlers.AuthHandler, jwtMgr *middleware.JWTManager
 	router.Handle("/api/auth/profile", jwtMgr.JWTMiddleware(http.HandlerFunc(authHandler.Profile))).Methods("GET")
 	router.HandleFunc("/api/auth/refresh", authHandler.RefreshSession).Methods("POST")
 	router.HandleFunc("/api/auth/logout", authHandler.Logout).Methods("POST")
+
+	sessionHandler := sessionhandlers.NewSessionHandler(sessionService)
+	router.HandleFunc("/api/session", jwtMgr.JWTMiddleware(http.HandlerFunc(sessionHandler.CreateSession))).Methods("POST")
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
