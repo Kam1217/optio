@@ -62,7 +62,7 @@ func (s *SessionService) generateInviteLink(sessionCode string) (string, error) 
 	return link.String(), nil
 }
 
-func (s *SessionService) CreateSession(ctx context.Context, sessionName string, creatorID uuid.UUID) (*database.Session, string, error) {
+func (s *SessionService) CreateNewSession(ctx context.Context, sessionName string, creatorID uuid.UUID) (*database.Session, string, error) {
 	sessionCode, err := s.generateUniqueSessionCode(ctx)
 	if err != nil {
 		return nil, "", fmt.Errorf("error generating session code: %w", err)
