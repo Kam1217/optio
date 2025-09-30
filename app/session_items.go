@@ -87,19 +87,26 @@ func (si *SessionItemService) CreateNewSessionItem(ctx context.Context, itemInpu
 	if itemInput.Title == "" {
 		return nil, fmt.Errorf("title is required")
 	}
-	item, err := si.queries.CreateSessionItem(ctx, database.CreateSessionItemParams{
-		SessionID:       itemInput.SessionId,
-		ItemTitle:       itemInput.Title,
-		ItemDescription: sql.NullString{String: itemInput.Description},
-		ImageUrl:        sql.NullString{String: itemInput.ImageURL},
-		SourceType:      string(SourceCustom),
-		SourceID:        sql.NullString{Valid: false},
-		Metadata:        pqtype.NullRawMessage{RawMessage: itemInput.Metadata},
-		AddedByUserID:   itemInput.AddedByUserID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create session item: %w", err)
-	}
 
-	return &item, nil
+	exists, err := si.CheckSessionItemExists(ctx, itemInput.SessionId)
+	if err != nil {
+		return nil, fmt.Errorf("error verifying if code exists: %w", err)
+	}
+	if !exists {
+		item, err := si.queries.CreateSessionItem(ctx, database.CreateSessionItemParams{
+			SessionID:       itemInput.SessionId,
+			ItemTitle:       itemInput.Title,
+			ItemDescription: sql.NullString{String: itemInput.Description},
+			ImageUrl:        sql.NullString{String: itemInput.ImageURL},
+			SourceType:      string(SourceCustom),
+			SourceID:        sql.NullString{Valid: false},
+			Metadata:        pqtype.NullRawMessage{RawMessage: itemInput.Metadata},
+			AddedByUserID:   itemInput.AddedByUserID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create session item: %w", err)
+		}
+		return &item, nil
+	}
+	return nil, fmt.Errorf("item already exists")
 }
