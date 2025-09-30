@@ -67,15 +67,16 @@ func main() {
 		log.Fatalf("INVITE_BASE_URL is required for session invites")
 	}
 	sessionService := app.NewSessionService(dbConn.Queries, inviteURL)
+	sessionItem := app.NewSessionItemService(dbConn.Queries)
 
-	router := setUpRouts(authHandler, jwtMgr, sessionService)
+	router := setUpRouts(authHandler, jwtMgr, sessionService, sessionItem)
 
 	if err := http.ListenAndServe(":"+port, router); err != nil {
 		log.Fatalf("Listen and serve: %v", err)
 	}
 }
 
-func setUpRouts(authHandler *authhandlers.AuthHandler, jwtMgr *middleware.JWTManager, sessionService *app.SessionService) *mux.Router {
+func setUpRouts(authHandler *authhandlers.AuthHandler, jwtMgr *middleware.JWTManager, sessionService *app.SessionService, sessionItem *app.SessionItemService) *mux.Router {
 	router := mux.NewRouter()
 	router.Use(corsMiddleware)
 
@@ -86,7 +87,9 @@ func setUpRouts(authHandler *authhandlers.AuthHandler, jwtMgr *middleware.JWTMan
 	router.HandleFunc("/api/auth/logout", authHandler.Logout).Methods("POST")
 
 	sessionHandler := sessionhandlers.NewSessionHandler(sessionService)
+	itemHandler := sessionhandlers.NewItemHandler(sessionItem)
 	router.HandleFunc("/api/session", jwtMgr.JWTMiddleware(http.HandlerFunc(sessionHandler.CreateSession))).Methods("POST")
+	router.HandleFunc("/api/item", jwtMgr.JWTMiddleware(http.HandlerFunc(itemHandler.CreateItem))).Methods("POST")
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
