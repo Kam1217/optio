@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Kam1217/optio/app"
@@ -18,14 +19,14 @@ func NewItemHandler(i *app.SessionItemService) *ItemHandler {
 }
 
 type CreateItemRequest struct {
-	ItemInput app.SessionItemInput
+	ItemInput app.SessionItemInput `json:"item"`
 }
 
 type CreateItemResponse struct {
 	ItemID          uuid.UUID `json:"item_id"`
 	SessionID       uuid.UUID `json:"session_id"`
-	ItemTitle       string    `json:"item_title"`
-	ItemDescription string    `json:"item_description"`
+	ItemTitle       string    `json:"title"`
+	ItemDescription string    `json:"description"`
 	ImageURL        string    `json:"image_url"`
 	SourceType      string    `json:"source_type"`
 }
@@ -50,6 +51,7 @@ func (ih *ItemHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 
 	item, err := ih.itemService.CreateNewSessionItem(r.Context(), req.ItemInput)
 	if err != nil {
+		fmt.Print(err)
 		http.Error(w, "Failed to create item", http.StatusInternalServerError)
 		return
 	}

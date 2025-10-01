@@ -12,9 +12,6 @@ import (
 	"github.com/sqlc-dev/pqtype"
 )
 
-//Check if item already exists in session (by ID) - prevents duplicates
-//Create session item that can be added to sessions
-
 type SessionItemService struct {
 	queries *database.Queries
 }
@@ -29,13 +26,13 @@ const (
 //ADD STEAM LATER
 
 type SessionItemInput struct {
-	Title         string
-	Description   string
-	ImageURL      string
-	SessionId     uuid.UUID
-	AddedByUserID uuid.UUID
-	SourceType    SourceType
-	Metadata      json.RawMessage
+	Title         string          `json:"title"`
+	Description   string          `json:"description"`
+	ImageURL      string          `json:"image_url"`
+	SessionId     uuid.UUID       `json:"session_id"`
+	AddedByUserID uuid.UUID       `json:"added_by_user_id"`
+	SourceType    SourceType      `json:"source_type"`
+	Metadata      json.RawMessage `json:"metadata"`
 }
 
 // type CustomMetadata struct {
@@ -96,11 +93,11 @@ func (si *SessionItemService) CreateNewSessionItem(ctx context.Context, itemInpu
 		item, err := si.queries.CreateSessionItem(ctx, database.CreateSessionItemParams{
 			SessionID:       itemInput.SessionId,
 			ItemTitle:       itemInput.Title,
-			ItemDescription: sql.NullString{String: itemInput.Description},
-			ImageUrl:        sql.NullString{String: itemInput.ImageURL},
+			ItemDescription: sql.NullString{String: itemInput.Description, Valid: true},
+			ImageUrl:        sql.NullString{String: itemInput.ImageURL, Valid: true},
 			SourceType:      string(SourceCustom),
 			SourceID:        sql.NullString{Valid: false},
-			Metadata:        pqtype.NullRawMessage{RawMessage: itemInput.Metadata},
+			Metadata:        pqtype.NullRawMessage{RawMessage: itemInput.Metadata, Valid: true},
 			AddedByUserID:   itemInput.AddedByUserID,
 		})
 		if err != nil {
